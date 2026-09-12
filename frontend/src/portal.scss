@@ -2,14 +2,15 @@
 
 /* ============================================================
    Trading-portal design — ported from the supplied CarbonLoop
-   design and shared by the EMITTER and UTILIZER portals.
+   design and shared by the EMITTER, UTILIZER, TRANSPORT and
+   REGULATOR portals.
 
    Shell chrome (sidebar, top bar, page surface) is scoped under
-   `.shell.portal`, so ADMIN, TRANSPORT, LAB and REGULATOR keep the
-   original light shell and the public pages are untouched.
+   `.shell.portal`, so ADMIN and LAB keep the original light shell
+   and the public pages are untouched.
 
    The page primitives below are prefixed `.em-` for historical
-   reasons; they are generic to both portals, not emitter-only.
+   reasons; they are generic to every portal, not emitter-only.
    ============================================================ */
 
 .shell.portal {
@@ -1232,11 +1233,14 @@ a.em-kpi:hover { text-decoration: none; }
 
   .tp-history { margin-top: 26px; }
 
-  /* Reconciliation flags read as codes, so keep them monospace and unmistakably red. */
-  .flag.flag-red {
+  /* Reconciliation and compliance flags read as codes, so keep them monospace: red for a
+     compliance problem, green for qualifying under a government scheme. */
+  .flag.flag-red, .flag.flag-green {
     font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.04em;
-    background: #fee2e2; color: #b91c1c; padding: 3px 8px; border-radius: 6px;
+    padding: 3px 8px; border-radius: 6px;
   }
+  .flag.flag-red { background: #fee2e2; color: #b91c1c; }
+  .flag.flag-green { background: #dcfce7; color: #15803d; }
 
   @media (max-width: 860px) {
     .tp-offer { align-items: stretch; }

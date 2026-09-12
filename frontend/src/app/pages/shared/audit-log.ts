@@ -27,7 +27,7 @@ import { errMsg } from '../../shared/utils';
                 <td class="nowrap small">{{ e.occurredAt | date:'short' }}</td>
                 <td class="small">{{ e.actorName || 'system' }}<div class="muted">{{ e.actorRole | label }}</div></td>
                 <td><strong class="small">{{ e.action | label }}</strong></td>
-                <td class="small">{{ e.entityType | label }}<div class="muted mono">{{ e.entityId | shortId }}</div></td>
+                <td class="small">{{ e.entityType | label }}<div class="muted mono">{{ entityRef(e.entityId) }}</div></td>
                 <td class="small"><details><summary class="small">view</summary><pre class="doc" style="max-height:200px">{{ e.details | json }}</pre></details></td>
                 <td class="hash">{{ e.previousHash | shortId:12 }}…</td>
                 <td class="hash">{{ e.hash | shortId:12 }}…</td>
@@ -45,6 +45,18 @@ import { errMsg } from '../../shared/utils';
 })
 export class AuditLog {
   private api = inject(ApiService);
+
+  /**
+   * Seeded ids are of the form 00000000-0000-0000-0000-000000001007, so a prefix renders every
+   * row as "00000000". Take the tail instead, which is the part that actually distinguishes them.
+   * Hashes keep their prefix, which is the conventional way to show one.
+   */
+  entityRef(id: string | null | undefined): string {
+    if (!id) return '—';
+    const flat = id.replace(/-/g, '');
+    return flat.length > 8 ? flat.slice(-8) : flat;
+  }
+
   page = signal<Page<AuditEventDto> | null>(null);
   loading = signal(true);
   error = signal<string | null>(null);

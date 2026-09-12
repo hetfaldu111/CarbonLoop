@@ -29,6 +29,10 @@ const PORTAL_ICONS: Record<string, string> = {
   check: '<circle cx="8" cy="8" r="6.3"/><path d="M5.4 8.2l1.9 1.9 3.3-3.7"/>',
   chat: '<path d="M14 9.4a1.9 1.9 0 01-1.9 1.9H6.2L2.6 14V4.1A1.9 1.9 0 014.5 2.2h7.6A1.9 1.9 0 0114 4.1v5.3z"/>',
   badge: '<path d="M8 1.6l1.85 3.8 4.15.6-3 2.95.71 4.15L8 11.15 4.29 13.1 5 8.95l-3-2.95 4.15-.6L8 1.6z"/>',
+  // Regulator-side glyphs
+  gauge: '<path d="M2.6 12.4a7 7 0 1110.8 0"/><path d="M8 8.6l3-2.6"/><circle cx="8" cy="9.4" r="1.2"/>',
+  building: '<rect x="2" y="3" width="7" height="11" rx="1"/><path d="M9 6.5h4.2a.8.8 0 01.8.8V14"/><line x1="4.3" y1="6" x2="6.7" y2="6"/><line x1="4.3" y1="9" x2="6.7" y2="9"/><line x1="11" y1="9.5" x2="12.4" y2="9.5"/>',
+  chain: '<path d="M6.6 9.4a2.6 2.6 0 003.9.3l2-2a2.6 2.6 0 00-3.7-3.7l-1.1 1.1"/><path d="M9.4 6.6a2.6 2.6 0 00-3.9-.3l-2 2a2.6 2.6 0 003.7 3.7l1.1-1.1"/>',
 };
 
 const NAV: Record<Role, NavItem[]> = {
@@ -63,9 +67,9 @@ const NAV: Record<Role, NavItem[]> = {
     { label: 'History', link: '/lab/history', icon: '⌛' },
   ],
   REGULATOR: [
-    { label: 'Overview', link: '/regulator', icon: '◈', exact: true },
-    { label: 'Companies', link: '/regulator/companies', icon: '▦' },
-    { label: 'Audit trail', link: '/regulator/audit', icon: '⛓' },
+    { label: 'Overview', link: '/regulator', icon: 'gauge', exact: true },
+    { label: 'Companies', link: '/regulator/companies', icon: 'building' },
+    { label: 'Audit trail', link: '/regulator/audit', icon: 'chain' },
   ],
 };
 
@@ -151,7 +155,7 @@ export class Shell {
   tier = signal<Tier | null>(null);
   basis = signal<string | null>(null);
   /** The three trading roles share the dark portal shell; admin, lab and regulator keep the light one. */
-  portalDesign = this.auth.hasRole('EMITTER', 'UTILIZER', 'TRANSPORT');
+  portalDesign = this.auth.hasRole('EMITTER', 'UTILIZER', 'TRANSPORT', 'REGULATOR');
 
   /** Wraps a thin-line glyph path in an SVG. Paths are our own constants, never user input. */
   iconFor(key: string): SafeHtml {
