@@ -2,7 +2,7 @@ import { Component, inject, input, signal } from '@angular/core';
 import { Router, Routes } from '@angular/router';
 import { AuthService } from './core/auth.service';
 import { ApiService } from './core/api.service';
-import { authGuard, roleGuard } from './core/guards';
+import { authGuard, roleGuard, guestGuard } from './core/guards';
 import { PublicLayout, Shell } from './layout/shell';
 import { Landing } from './pages/public/landing';
 import { Login } from './pages/public/login';
@@ -73,8 +73,8 @@ export const routes: Routes = [
   {
     path: '', component: PublicLayout, children: [
       { path: '', component: Landing, title: 'CarbonLoop — CO₂ marketplace' },
-      { path: 'login', component: Login, title: 'Log in' },
-      { path: 'register', component: Register, title: 'Register' },
+      { path: 'login', component: Login, title: 'Log in', canActivate: [guestGuard] },
+      { path: 'register', component: Register, title: 'Register', canActivate: [guestGuard] },
     ],
   },
   {
