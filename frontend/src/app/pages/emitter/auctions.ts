@@ -14,7 +14,7 @@ import { countdown } from '../shared/auction-room';
   imports: [DatePipe, RouterLink, StatusBadge, TierBadge, MoneyPipe, TonnesPipe, Alert, EmptyState, Loading, PageHeader],
   template: `
     <app-page-header title="My auctions" subtitle="Live tracking of every lot you put up. Bidder names are shown in full because you are the seller.">
-      <a class="btn btn-primary btn-sm" routerLink="/emitter/listings/new">Schedule an auction</a>
+      <a class="em-btn em-btn-green em-btn-sm" routerLink="/emitter/auctions/new">Schedule an auction</a>
     </app-page-header>
     <app-alert [message]="error()" />
 

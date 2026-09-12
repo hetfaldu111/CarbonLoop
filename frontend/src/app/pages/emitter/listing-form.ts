@@ -2,7 +2,7 @@ import { Component, computed, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api.service';
-import { ListingMode, PassportDto } from '../../core/models';
+import { PassportDto } from '../../core/models';
 import { TonnesPipe } from '../../shared/pipes';
 import { Alert, FieldError, Loading } from '../../shared/widgets';
 import { Check, FieldErrors, addDays, errMsg, isBlank, scrollToFirstInvalid, toDateInput, toDateTimeInput, toIso } from '../../shared/utils';
@@ -47,7 +47,6 @@ import { Check, FieldErrors, addDays, errMsg, isBlank, scrollToFirstInvalid, toD
             @if (f.deliveryMonths && f.monthlyTonnes) {
               <div class="alert alert-info">Agreement policy attached to this tender: <strong>{{ f.monthlyTonnes }} t per month for {{ f.deliveryMonths }} months</strong> ({{ scheduleTotal() }} t in total@if (scheduleMismatch()) {, which does not match the {{ f.volumeTonnes }} t you are listing}).</div>
             }
-          }
 
           <div class="field"><label>Description (public)</label><textarea name="description" [(ngModel)]="f.description" rows="3" placeholder="Delivery terms, special requirements… Company identity stays hidden until a proposal is made."></textarea></div>
         <div class="nl-foot">
@@ -63,7 +62,6 @@ export class ListingForm {
   passportId = input<string>();
   private api = inject(ApiService);
   private router = inject(Router);
-  modes = MODES;
   passports = signal<PassportDto[]>([]);
   loading = signal(true);
   busy = signal(false);
@@ -73,33 +71,17 @@ export class ListingForm {
   selected = signal<PassportDto | null>(null);
   free = computed(() => { const p = this.selected(); return p ? p.totalVolumeTonnes - p.allocatedTonnes : 0; });
   f = {
-    passportId: '', mode: 'TENDER' as ListingMode, volumeTonnes: 100, basePricePerTonne: 4000, minPurityPct: 95,
+    passportId: '', volumeTonnes: 100, basePricePerTonne: 4000, minPurityPct: 95,
     deliveryWindowStart: toDateInput(addDays(new Date(), 14)), deliveryWindowEnd: toDateInput(addDays(new Date(), 104)),
     closesAt: toDateTimeInput(addDays(new Date(), 7)), description: '',
     deliveryMonths: null as number | null, monthlyTonnes: null as number | null,
-    bidIncrement: 100, scheduledStartAt: toDateTimeInput(new Date(Date.now() + 10 * 60000)), durationMinutes: 30,
   };
 
-  modeFit(): string { return MODES.find((m) => m.mode === this.f.mode)?.fit ?? ''; }
   scheduleTotal(): number { return Math.round((this.f.deliveryMonths ?? 0) * (this.f.monthlyTonnes ?? 0) * 10) / 10; }
   scheduleMismatch(): boolean { return Math.abs(this.scheduleTotal() - +this.f.volumeTonnes) > 0.5; }
   syncMonthly(): void {
     const m = Number(this.f.deliveryMonths);
     if (m > 0) this.f.monthlyTonnes = Math.round((+this.f.volumeTonnes / m) * 10) / 10;
-  }
-  startInPast(): boolean { return this.f.mode === 'AUCTION' && new Date(this.f.scheduledStartAt).getTime() <= Date.now(); }
-  auctionSummary(): string {
-    const start = new Date(this.f.scheduledStartAt);
-    if (isNaN(start.getTime())) return 'Pick a valid opening time.';
-    const mins = Number(this.f.durationMinutes) || 0;
-    const end = new Date(start.getTime() + mins * 60000);
-    const fmt = (d: Date) => d.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
-    return `Bidding opens ${fmt(start)} and closes ${fmt(end)} (${mins} minutes). It starts at ₹${this.f.basePricePerTonne}/t for the whole ${this.f.volumeTonnes} t lot and rises ₹${this.f.bidIncrement}/t per bid. A bid in the final minute extends the clock by a minute. Whoever holds the last bid buys the lot, and that commitment cannot be cancelled.`;
-  }
-  canSubmit(): boolean {
-    if (+this.f.volumeTonnes > this.free() || +this.f.volumeTonnes <= 0) return false;
-    if (this.f.mode === 'AUCTION') return +this.f.bidIncrement > 0 && +this.f.durationMinutes > 0 && !this.startInPast();
-    return true;
   }
 
   ngOnInit(): void {
@@ -125,7 +107,7 @@ export class ListingForm {
     c.num('volumeTonnes', f.volumeTonnes, 'Volume to list', { gt: 0, unit: ' t' });
     c.when(!isBlank(f.volumeTonnes) && Number(f.volumeTonnes) > this.free(), 'volumeTonnes',
       `Only ${this.free()} t is free on this passport. Listed volume is locked immediately, so it cannot exceed that.`);
-    c.num('basePricePerTonne', f.basePricePerTonne, f.mode === 'AUCTION' ? 'Starting price' : 'Base price', { gt: 0 });
+    c.num('basePricePerTonne', f.basePricePerTonne, 'Base price', { gt: 0 });
     c.num('minPurityPct', f.minPurityPct, 'Minimum purity', { gt: 0, max: 100, unit: '%' });
 
     c.required('deliveryWindowStart', f.deliveryWindowStart, 'Delivery window start');
@@ -133,17 +115,10 @@ export class ListingForm {
     c.when(Check.notAfter(f.deliveryWindowStart, f.deliveryWindowEnd), 'deliveryWindowEnd',
       'The delivery window must end after it starts.');
 
-    if (f.mode === 'AUCTION') {
-      c.num('bidIncrement', f.bidIncrement, 'Increment per bid', { gt: 0 });
-      c.required('scheduledStartAt', f.scheduledStartAt, 'Bidding opens at');
-      c.when(Check.inPast(f.scheduledStartAt), 'scheduledStartAt', 'Bidding must open in the future.');
-      c.num('durationMinutes', f.durationMinutes, 'Auction duration', { gt: 0, unit: ' minutes' });
-    } else {
       c.required('closesAt', f.closesAt, 'Last date to apply');
       c.when(Check.inPast(f.closesAt), 'closesAt', 'The closing date must be in the future, or nobody can apply.');
-    }
 
-    if (f.mode === 'TENDER') {
+    {
       if (!isBlank(f.deliveryMonths)) c.num('deliveryMonths', f.deliveryMonths, 'Delivery months', { min: 1 });
       if (!isBlank(f.monthlyTonnes)) c.num('monthlyTonnes', f.monthlyTonnes, 'Tonnes per month', { gt: 0, unit: ' t' });
       c.when(!isBlank(f.deliveryMonths) && isBlank(f.monthlyTonnes), 'monthlyTonnes',
@@ -159,16 +134,13 @@ export class ListingForm {
 
     this.busy.set(true); this.error.set(null);
     this.api.createListing({
-      passportId: this.f.passportId, mode: this.f.mode, volumeTonnes: +this.f.volumeTonnes, basePricePerTonne: +this.f.basePricePerTonne, minPurityPct: +this.f.minPurityPct,
+      passportId: this.f.passportId, mode: 'TENDER', volumeTonnes: +this.f.volumeTonnes, basePricePerTonne: +this.f.basePricePerTonne, minPurityPct: +this.f.minPurityPct,
       deliveryWindowStart: this.f.deliveryWindowStart, deliveryWindowEnd: this.f.deliveryWindowEnd,
-      closesAt: this.f.mode === 'AUCTION' ? null : toIso(this.f.closesAt), description: this.f.description,
-      deliveryMonths: this.f.mode === 'TENDER' && this.f.deliveryMonths ? +this.f.deliveryMonths : null,
-      monthlyTonnes: this.f.mode === 'TENDER' && this.f.monthlyTonnes ? +this.f.monthlyTonnes : null,
-      bidIncrement: this.f.mode === 'AUCTION' ? +this.f.bidIncrement : null,
-      scheduledStartAt: this.f.mode === 'AUCTION' ? toIso(this.f.scheduledStartAt) : null,
-      durationMinutes: this.f.mode === 'AUCTION' ? +this.f.durationMinutes : null,
+      closesAt: toIso(this.f.closesAt), description: this.f.description,
+      deliveryMonths: this.f.deliveryMonths ? +this.f.deliveryMonths : null,
+      monthlyTonnes: this.f.monthlyTonnes ? +this.f.monthlyTonnes : null,
     }).subscribe({
-      next: (l) => { this.busy.set(false); this.router.navigate([this.f.mode === 'AUCTION' ? '/emitter/auctions' : '/emitter/listings', l.id]); },
+      next: (l) => { this.busy.set(false); this.router.navigate(['/emitter/listings', l.id]); },
       error: (e) => { this.error.set(errMsg(e)); this.busy.set(false); },
     });
   }

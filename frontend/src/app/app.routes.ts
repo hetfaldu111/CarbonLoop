@@ -25,6 +25,7 @@ import { EmitterListings } from './pages/emitter/listings';
 import { ListingForm } from './pages/emitter/listing-form';
 import { EmitterListingDetail } from './pages/emitter/listing-detail';
 import { EmitterAuctions } from './pages/emitter/auctions';
+import { AuctionForm } from './pages/emitter/auction-form';
 import { UtilizerDashboard } from './pages/utilizer/dashboard';
 import { Marketplace } from './pages/utilizer/marketplace';
 import { UtilizerListingDetail } from './pages/utilizer/listing-detail';
@@ -100,6 +101,7 @@ export const routes: Routes = [
         { path: 'listings/new', component: ListingForm, title: 'New listing' },
         { path: 'listings/:id', component: EmitterListingDetail, title: 'Listing' },
         { path: 'auctions', component: EmitterAuctions, title: 'My auctions' },
+        { path: 'auctions/new', component: AuctionForm, title: 'New auction' },
         { path: 'auctions/:id', component: AuctionRoom, title: 'Auction' },
         { path: 'agreements', component: AgreementsList, title: 'Agreements' },
         { path: 'negotiations', component: NegotiationsList, title: 'Negotiations' },
