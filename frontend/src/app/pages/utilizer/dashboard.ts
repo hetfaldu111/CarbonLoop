@@ -23,7 +23,7 @@ import { errMsg } from '../../shared/utils';
         <div class="stat"><div class="label">Open supply</div><div class="value">{{ openListings().length }}</div><div class="sub">{{ openVolume() | tonnes }} listed right now</div></div>
         <div class="stat"><div class="label">My proposals</div><div class="value">{{ liveProposals().length }}</div><div class="sub">awaiting emitter decision</div></div>
         <div class="stat"><div class="label">Active agreements</div><div class="value">{{ active().length }}</div><div class="sub">{{ activeVolume() | tonnes }} under contract</div></div>
-        <div class="stat"><div class="label">Trust tier</div><div class="value" style="font-size:1.2rem"><app-tier-badge [tier]="trust()?.tier" /></div><div class="sub">score {{ trust()?.hiddenScore | number:'1.0-0' }} · <a routerLink="/utilizer/trust">how to improve</a></div></div>
+        <div class="stat"><div class="label">Trust tier</div><div class="value" style="font-size:1.2rem"><app-tier-badge [tier]="trust()?.tier" /></div><div class="sub"><a routerLink="/utilizer/trust">how to improve</a></div></div>
       </div>
       @if (shortfalls().length) {
         <div class="alert alert-warn"><strong>Forecast shortfall alert:</strong> {{ shortfalls()[0].message }} <a routerLink="/notifications">view all</a></div>

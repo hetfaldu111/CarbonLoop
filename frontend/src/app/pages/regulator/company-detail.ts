@@ -25,8 +25,7 @@ import { errMsg } from '../../shared/utils';
         @if (!d.complianceFlags.length && !d.incentiveFlags.length) {<span class="muted small">No flags.</span>}
       </div>
       @if (d.trust) {
-        <div class="grid grid-4 mb">
-          <div class="stat"><div class="label">Hidden score</div><div class="value">{{ d.trust.hiddenScore | number:'1.0-1' }}</div></div>
+        <div class="grid grid-3 mb">
           <div class="stat"><div class="label">Completion</div><div class="value">{{ d.trust.completionRate | percent:'1.0-0' }}</div><div class="sub">{{ d.trust.completedAgreements }} / {{ d.trust.totalAgreements }}</div></div>
           <div class="stat"><div class="label">Cancellations</div><div class="value">{{ d.trust.cancellationsBeforeExpiry }}</div><div class="sub">rate {{ d.trust.cancellationRate | percent:'1.0-1' }}</div></div>
           <div class="stat"><div class="label">Approved</div><div class="value" style="font-size:1.1rem">{{ d.company.approvedAt | date:'mediumDate' }}</div></div>

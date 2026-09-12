@@ -23,7 +23,7 @@ import { errMsg } from '../../shared/utils';
         <div class="stat"><div class="label">Passports</div><div class="value">{{ passports().length }}</div><div class="sub">{{ verifiedCount() }} verified</div></div>
         <div class="stat"><div class="label">Open listings</div><div class="value">{{ openListings().length }}</div><div class="sub">{{ pendingProposals() }} proposals awaiting your decision</div></div>
         <div class="stat"><div class="label">Active agreements</div><div class="value">{{ activeAgreements().length }}</div><div class="sub">{{ pendingAgreements() }} pending lab approval</div></div>
-        <div class="stat"><div class="label">Trust</div><div class="value" style="font-size:1.2rem"><app-tier-badge [tier]="trust()?.tier" /></div><div class="sub">hidden score {{ trust()?.hiddenScore }}</div></div>
+        <div class="stat"><div class="label">Trust</div><div class="value" style="font-size:1.2rem"><app-tier-badge [tier]="trust()?.tier" /></div><div class="sub">{{ trust()?.badgeBasis || 'earned on your trading history' }}</div></div>
       </div>
       <div class="card">
         <h2>Capacity allocation</h2>

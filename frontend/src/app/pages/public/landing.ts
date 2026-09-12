@@ -88,8 +88,8 @@ import { errMsg } from '../../shared/utils';
             <p><strong>Tender</strong> for plannable wholesale demand, <strong>Auction</strong> for urgent spot lots, <strong>Negotiated contract</strong> for multi-month certainty (CBAM, green-steel timelines). Every tonne allocated is locked on the Passport inside a database transaction, so the same tonnes can never be sold twice.</p>
           </div>
           <div class="card">
-            <h3>3. Explainable priority score</h3>
-            <p>Buyers are ranked with a published weighted formula: trust tier, hidden reliability score, cancellation rate (heaviest penalty), offered price, volume fit, commitment length, escrow acceptance and distance. In tender mode trust outweighs price; in auction mode price weighs more. The emitter always makes the final call.</p>
+            <h3>3. Deterministic ranking, human decision</h3>
+            <p>Offers are ranked by fixed rules and each buyer's earned badge — Bronze to Diamond — never by a model or a prediction. For a tender the platform works out which combination of buyers is worth most and says so plainly; where offers are worth the same, the stronger badge wins. The emitter always makes the final call.</p>
           </div>
           <div class="card">
             <h3>4. Full delivered cost, layer by layer</h3>

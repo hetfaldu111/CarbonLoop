@@ -8,12 +8,12 @@ import { AuthService } from '../../core/auth.service';
 import { CostEstimateDto, IMPURITIES, ListingDto, PassportPublicDto, ProposalDto, TransportMode } from '../../core/models';
 import { StatusBadge, TierBadge } from '../../shared/badges';
 import { LabelPipe, MoneyPipe, TonnesPipe } from '../../shared/pipes';
-import { Alert, CostStackView, Loading, PageHeader, ScoreBreakdownView } from '../../shared/widgets';
+import { Alert, CostStackView, Loading, PageHeader } from '../../shared/widgets';
 import { errMsg } from '../../shared/utils';
 
 @Component({
   selector: 'app-utilizer-listing-detail',
-  imports: [DatePipe, DecimalPipe, FormsModule, RouterLink, StatusBadge, TierBadge, LabelPipe, MoneyPipe, TonnesPipe, Alert, CostStackView, Loading, PageHeader, ScoreBreakdownView],
+  imports: [DatePipe, DecimalPipe, FormsModule, RouterLink, StatusBadge, TierBadge, LabelPipe, MoneyPipe, TonnesPipe, Alert, CostStackView, Loading, PageHeader],
   template: `
     @if (loading()) {<app-loading />}
     <app-alert [message]="error()" />
@@ -48,7 +48,6 @@ import { errMsg } from '../../shared/utils';
           @if (myProposal(); as mp) {
             <h3>Your {{ l.mode === 'AUCTION' ? 'bid' : 'proposal' }} <app-status-badge [value]="mp.status" /></h3>
             <p class="small">{{ mp.quantityTonnes | tonnes }} at {{ mp.offeredPricePerTonne | money }}/t · {{ mp.durationMonths }} months · escrow {{ mp.acceptsEscrow ? 'yes' : 'no' }}</p>
-            <app-score-breakdown [b]="mp.scoreBreakdown" />
             @if (mp.status === 'SUBMITTED') {<div class="form-actions mt"><button class="btn btn-danger btn-sm" (click)="withdraw(mp)" [disabled]="busy()">Withdraw</button></div>}
           } @else if (l.status !== 'OPEN') {
             <h3>Listing closed</h3><p class="muted">This listing is {{ l.status | label }}.</p>

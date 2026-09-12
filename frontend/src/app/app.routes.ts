@@ -9,6 +9,7 @@ import { Login } from './pages/public/login';
 import { Register } from './pages/public/register';
 import { AdminApprovals } from './pages/admin/approvals';
 import { AdminCompanies } from './pages/admin/companies';
+import { AdminCompanyDetail } from './pages/admin/company-detail';
 import { AuditLog } from './pages/shared/audit-log';
 import { Notifications } from './pages/shared/notifications';
 import { AgreementsList } from './pages/shared/agreements-list';
@@ -87,7 +88,7 @@ export const routes: Routes = [
       { path: 'admin', canActivate: [roleGuard('ADMIN')], children: [
         { path: '', component: AdminApprovals, title: 'Approvals' },
         { path: 'companies', component: AdminCompanies, title: 'Companies' },
-        { path: 'audit', component: AuditLog, title: 'Audit trail' },
+        { path: 'companies/:id', component: AdminCompanyDetail, title: 'Company' },
       ] },
 
       { path: 'emitter', canActivate: [roleGuard('EMITTER')], children: [

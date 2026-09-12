@@ -7,12 +7,12 @@ import { ApiService } from '../../core/api.service';
 import { AwardOption, AwardSuggestionDto, ListingDto, ProposalDto } from '../../core/models';
 import { StatusBadge, TierBadge } from '../../shared/badges';
 import { LabelPipe, MoneyPipe, TonnesPipe } from '../../shared/pipes';
-import { Alert, EmptyState, Loading, PageHeader, ScoreBreakdownView } from '../../shared/widgets';
+import { Alert, EmptyState, Loading, PageHeader } from '../../shared/widgets';
 import { errMsg } from '../../shared/utils';
 
 @Component({
   selector: 'app-emitter-listing-detail',
-  imports: [DatePipe, DecimalPipe, RouterLink, StatusBadge, TierBadge, LabelPipe, MoneyPipe, TonnesPipe, Alert, EmptyState, Loading, PageHeader, ScoreBreakdownView],
+  imports: [DatePipe, DecimalPipe, RouterLink, StatusBadge, TierBadge, LabelPipe, MoneyPipe, TonnesPipe, Alert, EmptyState, Loading, PageHeader],
   template: `
     @if (loading()) {<app-loading />}
     <app-alert [message]="error()" />
@@ -64,7 +64,7 @@ import { errMsg } from '../../shared/utils';
               <button class="btn btn-sm" (click)="clearSelection()" [disabled]="busy() || !selected().size">Clear selection</button>
             </div>
           </div>
-          <p class="muted small mt">How this is computed: revenue = quantity × offered price per tonne. The server solves an exact 0/1 knapsack for the highest-revenue set of proposals that fits {{ s.capacityTonnes | tonnes }}. Equal-revenue ties go to the higher badge, then the higher reliability score. You are free to ignore all of it and pick whoever you want.</p>
+          <p class="muted small mt">How this is computed: revenue = quantity × offered price per tonne. The server solves an exact 0/1 knapsack for the highest-revenue set of proposals that fits {{ s.capacityTonnes | tonnes }}. Equal-revenue ties go to the higher badge. You are free to ignore all of it and pick whoever you want.</p>
         </div>
       }
 
@@ -87,7 +87,7 @@ import { errMsg } from '../../shared/utils';
             <thead><tr>
               @if (l.status === 'OPEN') {<th style="width:2.2rem"></th>}
               <th>Utilizer</th><th>Tier</th><th class="r">Quantity</th><th class="r">Price / t</th><th class="r">Revenue</th>
-              <th class="r">Score</th><th class="r">Purity req.</th><th class="r">Duration</th><th>Escrow</th><th>Status</th><th></th>
+              <th class="r">Purity req.</th><th class="r">Duration</th><th>Escrow</th><th>Status</th>
             </tr></thead>
             <tbody>@for (p of proposals(); track p.id) {
               <tr [class.highlight]="isRecommended(p.id)" [class.picked]="selected().has(p.id)">
@@ -96,25 +96,18 @@ import { errMsg } from '../../shared/utils';
                 }
                 <td>{{ p.utilizerName }}
                   <div class="muted small">{{ p.deliveryRequirement }}</div>
+                  @if (p.otherRequirements) {<div class="muted small">{{ p.otherRequirements }}</div>}
                   @if (isRecommended(p.id)) {<span class="badge status-success">in best combination</span>}
                 </td>
                 <td><app-tier-badge [tier]="p.utilizerTier" /></td>
                 <td class="r">{{ p.quantityTonnes | tonnes }}</td>
                 <td class="r">{{ p.offeredPricePerTonne | money }}</td>
                 <td class="r"><strong>{{ revenueOf(p) | money }}</strong></td>
-                <td class="r">{{ p.score | number:'1.1-1' }}</td>
                 <td class="r">{{ p.requiredPurityPct }}%</td>
                 <td class="r">{{ p.durationMonths }} mo</td>
                 <td>{{ p.acceptsEscrow ? 'Yes' : 'No' }}</td>
                 <td><app-status-badge [value]="p.status" /></td>
-                <td class="nowrap"><button class="btn btn-sm" (click)="toggle(p.id)">{{ open() === p.id ? 'Hide' : 'Why?' }}</button></td>
               </tr>
-              @if (open() === p.id) {
-                <tr><td [attr.colspan]="l.status === 'OPEN' ? 12 : 11">
-                  <app-score-breakdown [b]="p.scoreBreakdown" />
-                  @if (p.otherRequirements) {<p class="small mt"><strong>Other requirements:</strong> {{ p.otherRequirements }}</p>}
-                </td></tr>
-              }
             }</tbody>
           </table></div>
 
@@ -151,7 +144,6 @@ export class EmitterListingDetail {
   selected = signal<Set<string>>(new Set());
   loading = signal(true);
   busy = signal(false);
-  open = signal<string | null>(null);
   error = signal<string | null>(null);
   ok = signal<string | null>(null);
 
@@ -181,7 +173,6 @@ export class EmitterListingDetail {
 
   revenueOf(p: ProposalDto): number { return p.quantityTonnes * p.offeredPricePerTonne; }
   isRecommended(id: string): boolean { return !!this.sug()?.recommended?.proposalIds?.includes(id); }
-  toggle(id: string): void { this.open.set(this.open() === id ? null : id); }
   toggleSelect(id: string): void {
     this.selected.update((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
   }

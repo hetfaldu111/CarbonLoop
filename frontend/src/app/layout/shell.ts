@@ -13,7 +13,6 @@ const NAV: Record<Role, NavItem[]> = {
   ADMIN: [
     { label: 'Approvals', link: '/admin', icon: '✓', exact: true },
     { label: 'Companies', link: '/admin/companies', icon: '▦' },
-    { label: 'Audit trail', link: '/admin/audit', icon: '⛓' },
   ],
   EMITTER: [
     { label: 'Dashboard', link: '/emitter', icon: '◈', exact: true },
@@ -55,26 +54,22 @@ const NAV: Record<Role, NavItem[]> = {
   template: `
     <div class="shell">
       <aside class="sidebar">
-        <a class="brand" routerLink="/"><span class="logo">C₂</span><span>CarbonLoop<small>CO₂ marketplace</small></span></a>
+        <a class="brand" [routerLink]="home()"><span class="logo">C₂</span><span>CarbonLoop<small>CO₂ marketplace</small></span></a>
         <div class="nav-section">{{ role() | label }}</div>
         <nav class="nav">
           @for (n of items(); track n.link) {
             <a [routerLink]="n.link" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: !!n.exact }"><span class="ico">{{ n.icon }}</span>{{ n.label }}</a>
           }
-          <div class="nav-section">General</div>
-          <a routerLink="/notifications" routerLinkActive="active"><span class="ico">🔔</span>Notifications
-            @if (notif.unread() > 0) {<span class="badge status-danger" style="margin-left:auto">{{ notif.unread() }}</span>}
-          </a>
         </nav>
         <div class="sidebar-footer">Rule-based matching · no AI/ML · no blockchain</div>
       </aside>
       <div class="main">
         <header class="topbar">
-          <div class="who">
+          <a class="who" [routerLink]="home()" title="Go to your dashboard">
             <span class="name">{{ user()?.companyName }}</span>
             <app-tier-badge [tier]="tier()" [basis]="basis()" />
             <span class="muted small">{{ user()?.fullName }}</span>
-          </div>
+          </a>
           <div class="row">
             <a class="bell" routerLink="/notifications" title="Notifications">🔔 @if (notif.unread() > 0) {<span class="count">{{ notif.unread() }}</span>}</a>
             <button class="btn btn-sm" (click)="auth.logout()">Log out</button>
@@ -91,6 +86,8 @@ export class Shell {
   user = this.auth.user;
   role = this.auth.role;
   items = computed(() => (this.role() ? NAV[this.role()!] : []));
+  /** Brand and the identity block both return the signed-in role to its own dashboard. */
+  home = computed(() => this.auth.homeFor(this.role()));
   tier = signal<Tier | null>(null);
   basis = signal<string | null>(null);
 

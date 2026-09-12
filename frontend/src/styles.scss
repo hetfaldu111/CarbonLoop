@@ -91,7 +91,8 @@ p { margin: 0 0 0.75rem; }
 .sidebar-footer { margin-top: auto; padding: 0.75rem; font-size: 0.8rem; color: var(--muted); border-top: 1px solid var(--border); }
 .main { display: flex; flex-direction: column; min-width: 0; }
 .topbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.6rem 1.5rem; background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 5; }
-.topbar .who { display: flex; align-items: center; gap: 0.6rem; }
+.topbar .who { display: flex; align-items: center; gap: 0.6rem; color: var(--text); text-decoration: none; border-radius: 8px; padding: 0.2rem 0.4rem; }
+.topbar a.who:hover { background: var(--surface-2); text-decoration: none; }
 .topbar .who .name { font-weight: 600; }
 .bell { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; color: var(--text); }
 .bell:hover { background: var(--surface-2); text-decoration: none; }

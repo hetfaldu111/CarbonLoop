@@ -1,6 +1,6 @@
 import { Component, computed, input } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
-import { AllocationDto, CostEstimateDto, ScoreBreakdown } from '../core/models';
+import { AllocationDto, CostEstimateDto } from '../core/models';
 import { LabelPipe, MoneyPipe, TonnesPipe } from './pipes';
 
 @Component({
@@ -70,60 +70,6 @@ export class AllocationBar {
   pct(v: number): number { const t = this.a().totalVolumeTonnes; return t > 0 ? Math.max(0, Math.min(100, (v / t) * 100)) : 0; }
 }
 
-@Component({
-  selector: 'app-score-breakdown',
-  imports: [DecimalPipe, LabelPipe],
-  template: `
-    <div class="score-breakdown">
-      <div class="score-total">
-        <span class="score-num">{{ b().total | number:'1.1-1' }}</span>
-        <span class="muted">/ 100 · {{ b().mode | label }} weighting</span>
-      </div>
-      <div class="stacked-bar score-bar">
-        @for (c of positives(); track c.name) {
-          <div class="seg" [class]="'seg seg-c' + $index" [style.width.%]="c.contribution" [title]="c.name + ' +' + (c.contribution | number:'1.1-1')"></div>
-        }
-      </div>
-      @if (penalty() > 0) {
-        <div class="penalty-row">
-          <span class="muted">Cancellation penalty</span>
-          <div class="stacked-bar penalty-bar"><div class="seg seg-penalty" [style.width.%]="penalty()"></div></div>
-          <span class="neg">−{{ penalty() | number:'1.1-1' }}</span>
-        </div>
-      }
-      <div class="table-wrap">
-        <table class="table compact">
-          <thead><tr><th>Parameter</th><th>Raw value</th><th>Normalized</th><th>Weight</th><th>Contribution</th><th>Why</th></tr></thead>
-          <tbody>
-            @for (c of b().components; track c.name; let i = $index) {
-              <tr>
-                <td>
-                  <i class="sw" [class]="'sw ' + (c.contribution < 0 ? 'seg-penalty' : 'seg-c' + posIndex(c.name))"></i>{{ c.name | label }}
-                  <div class="why-inline muted small">{{ c.explanation }}</div>
-                </td>
-                <td>{{ formatRaw(c.rawValue) }}</td>
-                <td>{{ c.normalized | number:'1.0-1' }}</td>
-                <td>{{ c.weight | number:'1.2-2' }}</td>
-                <td [class.neg]="c.contribution < 0" [class.pos]="c.contribution > 0">{{ c.contribution >= 0 ? '+' : '' }}{{ c.contribution | number:'1.1-1' }}</td>
-                <td class="muted small">{{ c.explanation }}</td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-    </div>`,
-})
-export class ScoreBreakdownView {
-  b = input.required<ScoreBreakdown>();
-  positives = computed(() => this.b().components.filter((c) => c.contribution > 0));
-  penalty = computed(() => Math.abs(this.b().components.filter((c) => c.contribution < 0).reduce((s, c) => s + c.contribution, 0)));
-  posIndex(name: string): number { return Math.max(0, this.positives().findIndex((c) => c.name === name)); }
-  formatRaw(v: string | number | boolean): string {
-    if (typeof v === 'boolean') return v ? 'Yes' : 'No';
-    if (typeof v === 'number') return Number.isInteger(v) ? String(v) : v.toFixed(2);
-    return String(v);
-  }
-}
 
 @Component({
   selector: 'app-cost-stack',

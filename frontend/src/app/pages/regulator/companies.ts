@@ -23,7 +23,7 @@ import { errMsg } from '../../shared/utils';
     @else if (!filtered().length) {<app-empty-state message="No companies match." />}
     @else {
       <div class="card tight table-wrap"><table class="table">
-        <thead><tr><th>Company</th><th>Role</th><th>Sector</th><th>Location</th><th>Tier</th><th class="r">Score</th><th class="r">Verified passports</th><th class="r">Agreements</th><th>Compliance</th><th>Incentives</th><th></th></tr></thead>
+        <thead><tr><th>Company</th><th>Role</th><th>Sector</th><th>Location</th><th>Tier</th><th class="r">Verified passports</th><th class="r">Agreements</th><th>Compliance</th><th>Incentives</th><th></th></tr></thead>
         <tbody>@for (c of filtered(); track c.id) {
           <tr>
             <td><strong>{{ c.name }}</strong></td>
@@ -31,7 +31,6 @@ import { errMsg } from '../../shared/utils';
             <td>{{ c.sector | label }}</td>
             <td>{{ c.city }}, {{ c.state }}</td>
             <td><app-tier-badge [tier]="c.tier" /></td>
-            <td class="r">{{ c.hiddenScore | number:'1.0-0' }}</td>
             <td class="r">{{ c.verifiedPassports }}</td>
             <td class="r">{{ c.totalAgreements }}</td>
             <td>@for (f of c.complianceFlags; track f) {<span class="flag flag-red">{{ f }}</span>} @empty {<span class="muted small">clean</span>}</td>
