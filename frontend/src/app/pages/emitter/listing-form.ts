@@ -7,13 +7,6 @@ import { TonnesPipe } from '../../shared/pipes';
 import { Alert, FieldError, Loading } from '../../shared/widgets';
 import { Check, FieldErrors, addDays, errMsg, isBlank, scrollToFirstInvalid, toDateInput, toDateTimeInput, toIso } from '../../shared/utils';
 
-/** Shown in the design's order: Auction, Tender, Contract. */
-const MODES: { mode: ListingMode; short: string; fit: string }[] = [
-  { mode: 'AUCTION', short: 'Auction', fit: 'Spot lots. Scheduled live bidding that opens at your starting price and climbs by a fixed increment; the last bid when the clock stops wins automatically.' },
-  { mode: 'TENDER', short: 'Tender', fit: 'Wholesale. Buyers submit proposals and you may accept several at once; the system shows the combination that earns the most.' },
-  { mode: 'CONTRACT', short: 'Contract', fit: 'Bilateral long-term supply agreed privately through an offer and counter-offer thread.' },
-];
-
 @Component({
   selector: 'app-listing-form',
   imports: [FormsModule, RouterLink, TonnesPipe, Alert, FieldError, Loading],
@@ -35,32 +28,19 @@ const MODES: { mode: ListingMode; short: string; fit: string }[] = [
               <select name="passportId" [(ngModel)]="f.passportId" (ngModelChange)="onPassport()">@for (p of passports(); track p.id) {<option [value]="p.id">{{ p.passportCode }} — {{ p.source }} · {{ p.concentrationPct }}% · free {{ p.totalVolumeTonnes - p.allocatedTonnes | tonnes }}</option>}</select>
             </div>
           </div>
-          <div class="nl-full">
-            <div class="field"><label>Listing mode</label>
-              <div class="nl-modes">
-                @for (m of modes; track m.mode) {
-                  <button type="button" class="nl-mode" [class.on]="f.mode === m.mode" (click)="f.mode = m.mode">{{ m.short }}</button>
-                }
-              </div>
-              <span class="hint">{{ modeFit() }}</span>
-            </div>
-          </div>
         </div>
-        @if (f.mode === 'CONTRACT') {<div class="alert alert-info">Contract listings advertise availability; the actual deal is done through a private negotiation thread. Utilizers can direct-connect from this listing.</div>}
         <div class="form-row">
             <div class="field" [class.invalid]="fe()['volumeTonnes']"><label>Volume to list (t) <span class="required-star">*</span></label><input type="number" step="0.1" name="volumeTonnes" [(ngModel)]="f.volumeTonnes" required [attr.aria-invalid]="fe()['volumeTonnes'] ? 'true' : null" /><span class="hint">Free on this passport: <strong>{{ free() | tonnes }}</strong></span><app-field-error [msg]="fe()['volumeTonnes']" /></div>
-            <div class="field" [class.invalid]="fe()['basePricePerTonne']"><label>{{ f.mode === 'AUCTION' ? 'Starting price (₹ / t)' : 'Base price (₹ / t)' }} <span class="required-star">*</span></label><input type="number" name="basePricePerTonne" [(ngModel)]="f.basePricePerTonne" required [attr.aria-invalid]="fe()['basePricePerTonne'] ? 'true' : null" /><app-field-error [msg]="fe()['basePricePerTonne']" /></div>
-            @if (f.mode === 'AUCTION') {<div class="field" [class.invalid]="fe()['bidIncrement']"><label>Increment per bid (₹ / t) <span class="required-star">*</span></label><input type="number" step="1" name="bidIncrement" [(ngModel)]="f.bidIncrement" required [attr.aria-invalid]="fe()['bidIncrement'] ? 'true' : null" /><span class="hint">Every bid raises the price by exactly this much.</span><app-field-error [msg]="fe()['bidIncrement']" /></div>}
+            <div class="field" [class.invalid]="fe()['basePricePerTonne']"><label>Base price (₹ / t) <span class="required-star">*</span></label><input type="number" name="basePricePerTonne" [(ngModel)]="f.basePricePerTonne" required [attr.aria-invalid]="fe()['basePricePerTonne'] ? 'true' : null" /><app-field-error [msg]="fe()['basePricePerTonne']" /></div>
             <div class="field" [class.invalid]="fe()['minPurityPct']"><label>Minimum purity you guarantee (%) <span class="required-star">*</span></label><input type="number" step="0.1" name="minPurityPct" [(ngModel)]="f.minPurityPct" required [attr.aria-invalid]="fe()['minPurityPct'] ? 'true' : null" /><app-field-error [msg]="fe()['minPurityPct']" /></div>
           </div>
           <div class="form-row">
             <div class="field" [class.invalid]="fe()['deliveryWindowStart']"><label>Delivery window start <span class="required-star">*</span></label><input type="date" name="deliveryWindowStart" [(ngModel)]="f.deliveryWindowStart" required [attr.aria-invalid]="fe()['deliveryWindowStart'] ? 'true' : null" /><app-field-error [msg]="fe()['deliveryWindowStart']" /></div>
             <div class="field" [class.invalid]="fe()['deliveryWindowEnd']"><label>Delivery window end <span class="required-star">*</span></label><input type="date" name="deliveryWindowEnd" [(ngModel)]="f.deliveryWindowEnd" required [attr.aria-invalid]="fe()['deliveryWindowEnd'] ? 'true' : null" /><app-field-error [msg]="fe()['deliveryWindowEnd']" /></div>
-            @if (f.mode !== 'AUCTION') {<div class="field" [class.invalid]="fe()['closesAt']"><label>Last date to apply <span class="required-star">*</span></label><input type="datetime-local" name="closesAt" [(ngModel)]="f.closesAt" required [attr.aria-invalid]="fe()['closesAt'] ? 'true' : null" /><span class="hint">Proposals cannot be submitted after this.</span><app-field-error [msg]="fe()['closesAt']" /></div>}
+            <div class="field" [class.invalid]="fe()['closesAt']"><label>Last date to apply <span class="required-star">*</span></label><input type="datetime-local" name="closesAt" [(ngModel)]="f.closesAt" required [attr.aria-invalid]="fe()['closesAt'] ? 'true' : null" /><span class="hint">Proposals cannot be submitted after this.</span><app-field-error [msg]="fe()['closesAt']" /></div>
           </div>
 
-          @if (f.mode === 'TENDER') {
-            <div class="form-row">
+          <div class="form-row">
               <div class="field" [class.invalid]="fe()['deliveryMonths']"><label>Delivery months (optional)</label><input type="number" min="1" step="1" name="deliveryMonths" [(ngModel)]="f.deliveryMonths" (ngModelChange)="syncMonthly()" [attr.aria-invalid]="fe()['deliveryMonths'] ? 'true' : null" /><span class="hint">Spread the volume over a recurring schedule.</span><app-field-error [msg]="fe()['deliveryMonths']" /></div>
               <div class="field" [class.invalid]="fe()['monthlyTonnes']"><label>Tonnes per month</label><input type="number" step="0.1" name="monthlyTonnes" [(ngModel)]="f.monthlyTonnes" [attr.aria-invalid]="fe()['monthlyTonnes'] ? 'true' : null" /><span class="hint">Defaults to volume divided by months.</span><app-field-error [msg]="fe()['monthlyTonnes']" /></div>
             </div>
@@ -69,17 +49,9 @@ const MODES: { mode: ListingMode; short: string; fit: string }[] = [
             }
           }
 
-          @if (f.mode === 'AUCTION') {
-            <div class="form-row">
-              <div class="field" [class.invalid]="fe()['scheduledStartAt']"><label>Bidding opens at <span class="required-star">*</span></label><input type="datetime-local" name="scheduledStartAt" [(ngModel)]="f.scheduledStartAt" required [attr.aria-invalid]="fe()['scheduledStartAt'] ? 'true' : null" /><span class="hint">Must be in the future.</span><app-field-error [msg]="fe()['scheduledStartAt']" /></div>
-              <div class="field" [class.invalid]="fe()['durationMinutes']"><label>Stays live for (minutes) <span class="required-star">*</span></label><input type="number" min="1" step="1" name="durationMinutes" [(ngModel)]="f.durationMinutes" required [attr.aria-invalid]="fe()['durationMinutes'] ? 'true' : null" /><app-field-error [msg]="fe()['durationMinutes']" /></div>
-            </div>
-            <div class="alert alert-info">{{ auctionSummary() }}</div>
-            @if (startInPast()) {<div class="alert alert-warn">The opening time is in the past. Pick a future time.</div>}
-          }
           <div class="field"><label>Description (public)</label><textarea name="description" [(ngModel)]="f.description" rows="3" placeholder="Delivery terms, special requirements… Company identity stays hidden until a proposal is made."></textarea></div>
         <div class="nl-foot">
-          <button class="em-btn em-btn-green" [disabled]="busy()">{{ f.mode === 'AUCTION' ? 'Schedule Auction' : 'Publish Listing' }}</button>
+          <button class="em-btn em-btn-green" [disabled]="busy()">Publish Listing</button>
           <a class="em-btn em-btn-out" routerLink="/emitter/listings">Cancel</a>
           <span class="nl-lock">locks {{ f.volumeTonnes | tonnes }} on the passport</span>
         </div>
