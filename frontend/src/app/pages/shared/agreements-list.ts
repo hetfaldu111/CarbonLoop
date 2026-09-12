@@ -1,7 +1,9 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api.service';
+import { AuthService } from '../../core/auth.service';
 import { AgreementDto } from '../../core/models';
 import { StatusBadge } from '../../shared/badges';
 import { MoneyPipe, TonnesPipe } from '../../shared/pipes';
@@ -10,17 +12,60 @@ import { errMsg } from '../../shared/utils';
 
 @Component({
   selector: 'app-agreements-list',
-  imports: [DatePipe, RouterLink, StatusBadge, MoneyPipe, TonnesPipe, Alert, EmptyState, Loading, PageHeader],
+  imports: [DatePipe, FormsModule, RouterLink, StatusBadge, MoneyPipe, TonnesPipe, Alert, EmptyState, Loading, PageHeader],
   template: `
-    <app-page-header title="Agreements" subtitle="Awarded tenders, won auctions and signed contracts. Sales become ACTIVE only after lab approval.">
-      <div class="tabs" style="margin:0;border:0">
+    <!-- The emitter portal uses the design's card rows; other roles keep the table. -->
+    @if (isEmitter) {
+      <div class="em-ac-header">
+        <h1>Agreements</h1>
+        <div class="em-ac-tools">
+          <div class="em-search">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true">
+              <circle cx="7" cy="7" r="5" /><path d="M11 11l3.5 3.5" />
+            </svg>
+            <input [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Search agreements…" aria-label="Search agreements" />
+          </div>
+        </div>
+      </div>
+      <p class="em-ac-sub">Awarded tenders, won auctions and signed contracts. Sales become active only after lab approval.</p>
+      <div class="tabs mb">
         @for (t of tabs; track t) {<button [class.active]="tab() === t" (click)="tab.set(t)">{{ t }}</button>}
       </div>
-    </app-page-header>
+    } @else {
+      <app-page-header title="Agreements" subtitle="Awarded tenders, won auctions and signed contracts. Sales become ACTIVE only after lab approval.">
+        <div class="tabs" style="margin:0;border:0">
+          @for (t of tabs; track t) {<button [class.active]="tab() === t" (click)="tab.set(t)">{{ t }}</button>}
+        </div>
+      </app-page-header>
+    }
+
     <app-alert [message]="error()" />
     @if (loading()) {<app-loading />}
     @else if (!filtered().length) {<app-empty-state message="No agreements in this view." />}
-    @else {
+    @else if (isEmitter) {
+      <div class="em-rows">
+        @for (a of filtered(); track a.id) {
+          <a class="em-row" [routerLink]="['/agreements', a.id]">
+            <span class="rail" [style.background]="railColour(a.status)"></span>
+            <span class="main">
+              <span class="top">
+                <span class="nm">{{ counterparty(a) }}</span>
+                <app-status-badge [value]="a.status" />
+                <app-status-badge [value]="a.mode" />
+              </span>
+              <span class="sub">{{ a.passportCode }} · {{ a.startsAt | date:'mediumDate' }} → {{ a.endsAt | date:'mediumDate' }}@if (a.volumePerMonth) {<span> · {{ a.volumePerMonth | tonnes }}/mo × {{ a.durationMonths }}</span>}</span>
+            </span>
+            <span class="figs">
+              <span class="v">{{ a.volumeTonnes | tonnes }}</span>
+              <span class="m">{{ a.totalValue | money }}</span>
+            </span>
+            <span class="open">Open
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 7h10M8 3l4 4-4 4" /></svg>
+            </span>
+          </a>
+        }
+      </div>
+    } @else {
       <div class="card tight table-wrap">
         <table class="table">
           <thead><tr><th>Passport</th><th>Mode</th><th>Emitter</th><th>Utilizer</th><th class="r">Volume</th><th class="r">Price / t</th><th class="r">Value</th><th>Window</th><th>Status</th><th></th></tr></thead>
@@ -45,15 +90,37 @@ import { errMsg } from '../../shared/utils';
 })
 export class AgreementsList {
   private api = inject(ApiService);
+  private auth = inject(AuthService);
+  isEmitter = this.auth.hasRole('EMITTER');
   rows = signal<AgreementDto[]>([]);
   loading = signal(true);
   error = signal<string | null>(null);
   tabs = ['All', 'Active', 'Pending', 'Completed', 'Cancelled'];
   tab = signal('All');
+  search = signal('');
+
   filtered = computed(() => {
     const t = this.tab();
-    return this.rows().filter((a) => t === 'All' || (t === 'Active' && a.status === 'ACTIVE') || (t === 'Pending' && a.status === 'PENDING_VERIFICATION') || (t === 'Completed' && a.status === 'COMPLETED') || (t === 'Cancelled' && a.status === 'CANCELLED'));
+    const q = this.search().trim().toLowerCase();
+    return this.rows()
+      .filter((a) => t === 'All' || (t === 'Active' && a.status === 'ACTIVE') || (t === 'Pending' && a.status === 'PENDING_VERIFICATION') || (t === 'Completed' && a.status === 'COMPLETED') || (t === 'Cancelled' && a.status === 'CANCELLED'))
+      .filter((a) => !q || [a.passportCode, a.emitterName, a.utilizerName, a.mode, a.status].some((v) => (v ?? '').toString().toLowerCase().includes(q)));
   });
+
+  /** The other side of the deal, since the emitter is always one party here. */
+  counterparty(a: AgreementDto): string {
+    return (this.isEmitter ? a.utilizerName : a.emitterName) || 'Counterparty';
+  }
+  /** The status rail down the left of each row, as in the design. */
+  railColour(status: string): string {
+    switch (status) {
+      case 'ACTIVE': return '#22c55e';
+      case 'PENDING_VERIFICATION': return '#f59e0b';
+      case 'COMPLETED': return '#64748b';
+      default: return 'rgba(13,35,24,0.2)';
+    }
+  }
+
   constructor() {
     this.api.agreements().subscribe({
       next: (r) => { this.rows.set(r); this.loading.set(false); },
