@@ -54,7 +54,18 @@ const NAV: Record<Role, NavItem[]> = {
   template: `
     <div class="shell">
       <aside class="sidebar">
-        <a class="brand" [routerLink]="home()"><span class="logo">C₂</span><span>CarbonLoop<small>CO₂ marketplace</small></span></a>
+        <a class="brand" [routerLink]="home()">
+          <span class="logo">
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+              <circle cx="14" cy="14" r="13" stroke="#1A3C2A" stroke-width="1.5" />
+              <path d="M 14,3 A 11,11 0 1,1 3,14" stroke="#30BE69" stroke-width="2" stroke-linecap="round" fill="none" />
+              <circle cx="14" cy="3" r="2.5" fill="#30BE69" />
+              <polygon points="3,11 3,17 7,14" fill="#30BE69" />
+              <circle cx="14" cy="14" r="3" fill="#1A3C2A" />
+            </svg>
+          </span>
+          <span>Carbon<span style="color:var(--eco)">Loop</span><small>CO₂ marketplace</small></span>
+        </a>
         <div class="nav-section">{{ role() | label }}</div>
         <nav class="nav">
           @for (n of items(); track n.link) {
@@ -103,15 +114,30 @@ export class Shell {
   imports: [RouterOutlet, RouterLink],
   template: `
     <div class="public-shell">
-      <nav class="public-nav">
-        <a class="brand" routerLink="/"><span class="logo">C₂</span><span>CarbonLoop<small>Circular carbon marketplace</small></span></a>
-        <div class="links">
-          @if (auth.isLoggedIn()) {
-            <a class="btn btn-primary" [routerLink]="auth.homeFor(auth.role())">Go to dashboard</a>
-          } @else {
-            <a class="btn" routerLink="/login">Log in</a>
-            <a class="btn btn-primary" routerLink="/register">Register company</a>
-          }
+      <nav class="cl-nav" [class.scrolled]="scrolled()">
+        <div class="cl-nav-inner">
+          <a class="cl-logo" routerLink="/">
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+              <circle cx="14" cy="14" r="13" stroke="#1A3C2A" stroke-width="1.5" />
+              <path d="M 14,3 A 11,11 0 1,1 3,14" stroke="#30BE69" stroke-width="2" stroke-linecap="round" fill="none" />
+              <circle cx="14" cy="3" r="2.5" fill="#30BE69" />
+              <polygon points="3,11 3,17 7,14" fill="#30BE69" />
+              <circle cx="14" cy="14" r="3" fill="#1A3C2A" />
+            </svg>
+            <span class="cl-logo-text">Carbon<span>Loop</span></span>
+          </a>
+          <div class="cl-nav-links">
+            <a class="lnk sec" href="#exchange">Exchange</a>
+            <a class="lnk sec" href="#mechanisms">Mechanisms</a>
+            <a class="lnk sec" href="#verify">Verify</a>
+            <a class="lnk sec" href="#about">About</a>
+            @if (auth.isLoggedIn()) {
+              <a class="cl-pill" [routerLink]="auth.homeFor(auth.role())">Go to dashboard</a>
+            } @else {
+              <a class="lnk" routerLink="/login">Log in</a>
+              <a class="cl-pill" routerLink="/register">Request Access</a>
+            }
+          </div>
         </div>
       </nav>
       <div class="public-content"><router-outlet /></div>
@@ -119,4 +145,9 @@ export class Shell {
 })
 export class PublicLayout {
   auth = inject(AuthService);
+  /** The nav is transparent over the hero and frosts once the page scrolls. */
+  scrolled = signal(false);
+  constructor() {
+    window.addEventListener('scroll', () => this.scrolled.set(window.scrollY > 20), { passive: true });
+  }
 }
