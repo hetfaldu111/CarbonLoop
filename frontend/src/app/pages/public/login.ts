@@ -1,51 +1,29 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { Alert } from '../../shared/widgets';
 import { errMsg } from '../../shared/utils';
 
-interface DemoAccount { email: string; label: string; note: string; }
-interface DemoGroup { title: string; accounts: DemoAccount[]; }
+interface DemoAccount { email: string; label: string; note: string; role: string; }
 
-/** Split so the two panels flank the card evenly. */
-const LEFT: DemoGroup[] = [
-  {
-    title: 'Emitters',
-    accounts: [
-      { email: 'cement@carbon.local', label: 'Saurashtra Cement Works', note: 'Porbandar · tender + live auction' },
-      { email: 'steel@carbon.local', label: 'Kalinga Steel Plant', note: 'Angul · two-winner tender' },
-      { email: 'power@carbon.local', label: 'Kutch Thermal Power', note: 'Mundra · pipeline connected' },
-    ],
-  },
-  {
-    title: 'Platform',
-    accounts: [
-      { email: 'admin@carbon.local', label: 'Marketplace Admin', note: 'Approvals + company search' },
-      { email: 'lab@carbon.local', label: 'National CO₂ Testing Lab', note: 'Verification queue' },
-      { email: 'regulator@carbon.local', label: 'NITI CCUS Oversight Cell', note: 'Read-only oversight' },
-    ],
-  },
+/** Every seeded demo account, filterable by role. */
+const DEMO: DemoAccount[] = [
+  { email: 'cement@carbon.local', label: 'Saurashtra Cement Works', note: 'Porbandar · tender + live auction', role: 'Emitter' },
+  { email: 'steel@carbon.local', label: 'Kalinga Steel Plant', note: 'Angul · two-winner tender', role: 'Emitter' },
+  { email: 'power@carbon.local', label: 'Kutch Thermal Power', note: 'Mundra · pipeline connected', role: 'Emitter' },
+  { email: 'methanol@carbon.local', label: 'Gujarat Methanol Synthesis', note: 'Gold · cost estimator', role: 'Utilizer' },
+  { email: 'algae@carbon.local', label: 'Bay of Bengal Algae Farms', note: 'Diamond · shipments', role: 'Utilizer' },
+  { email: 'greenhouse@carbon.local', label: 'Sabarmati Agro Greenhouses', note: 'Silver · leading a bid', role: 'Utilizer' },
+  { email: 'concrete@carbon.local', label: 'Carbonated Concrete Co', note: 'Bronze · high cancellations', role: 'Utilizer' },
+  { email: 'gujtrans@carbon.local', label: 'Saurashtra Cryo Logistics', note: 'Gujarat fleet', role: 'Transport' },
+  { email: 'odtrans@carbon.local', label: 'East Coast Gas Carriers', note: 'Odisha · assigned shipment', role: 'Transport' },
+  { email: 'lab@carbon.local', label: 'National CO₂ Testing Lab', note: 'Verification queue', role: 'Lab' },
+  { email: 'regulator@carbon.local', label: 'NITI CCUS Oversight Cell', note: 'Read-only oversight', role: 'Regulator' },
+  { email: 'admin@carbon.local', label: 'Marketplace Admin', note: 'Approvals + company search', role: 'Admin' },
 ];
 
-const RIGHT: DemoGroup[] = [
-  {
-    title: 'Utilizers',
-    accounts: [
-      { email: 'methanol@carbon.local', label: 'Gujarat Methanol Synthesis', note: 'Gold · cost estimator' },
-      { email: 'algae@carbon.local', label: 'Bay of Bengal Algae Farms', note: 'Diamond · shipments' },
-      { email: 'greenhouse@carbon.local', label: 'Sabarmati Agro Greenhouses', note: 'Silver · leading a bid' },
-      { email: 'concrete@carbon.local', label: 'Carbonated Concrete Co', note: 'Bronze · high cancellations' },
-    ],
-  },
-  {
-    title: 'Transport',
-    accounts: [
-      { email: 'gujtrans@carbon.local', label: 'Saurashtra Cryo Logistics', note: 'Gujarat fleet' },
-      { email: 'odtrans@carbon.local', label: 'East Coast Gas Carriers', note: 'Odisha · assigned shipment' },
-    ],
-  },
-];
+const DEMO_FILTERS = ['All', 'Emitter', 'Utilizer', 'Transport', 'Lab', 'Regulator', 'Admin'];
 
 @Component({
   selector: 'app-login',
@@ -196,23 +174,7 @@ const RIGHT: DemoGroup[] = [
         }
       </div>
 
-      <div class="login-grid">
-
-        <!-- left demo panel -->
-        <aside class="demo-panel left">
-          @for (g of left; track g.title) {
-            <div class="demo-group">
-              <div class="demo-title">{{ g.title }}</div>
-              @for (a of g.accounts; track a.email) {
-                <button type="button" class="demo-row" (click)="use(a.email)" [class.active]="email === a.email">
-                  <span class="demo-label">{{ a.label }}</span>
-                  <span class="demo-mail">{{ a.email }}</span>
-                  <span class="demo-note">{{ a.note }}</span>
-                </button>
-              }
-            </div>
-          }
-        </aside>
+      <div class="login-col">
 
         <!-- centre card -->
         <main class="login-card">
@@ -249,21 +211,25 @@ const RIGHT: DemoGroup[] = [
           <p class="login-foot">Demo password for every account: <code>Password123!</code></p>
         </main>
 
-        <!-- right demo panel -->
-        <aside class="demo-panel right">
-          @for (g of right; track g.title) {
-            <div class="demo-group">
-              <div class="demo-title">{{ g.title }}</div>
-              @for (a of g.accounts; track a.email) {
-                <button type="button" class="demo-row" (click)="use(a.email)" [class.active]="email === a.email">
-                  <span class="demo-label">{{ a.label }}</span>
-                  <span class="demo-mail">{{ a.email }}</span>
-                  <span class="demo-note">{{ a.note }}</span>
-                </button>
-              }
-            </div>
-          }
-        </aside>
+
+        <!-- compact demo chooser, below the card -->
+        <section class="demo-try" aria-label="Try a demo account">
+          <div class="demo-try-head">Try a demo account</div>
+          <div class="demo-chips" role="group" aria-label="Filter demo accounts by role">
+            @for (fl of filters; track fl) {
+              <button type="button" class="demo-chip" [class.on]="filter() === fl" (click)="filter.set(fl)">{{ fl }}</button>
+            }
+          </div>
+          <div class="demo-pills">
+            @for (a of visible(); track a.email) {
+              <button type="button" class="demo-pill" [class.active]="email === a.email"
+                      (click)="use(a.email)" [attr.title]="a.note">
+                <span class="dp-name">{{ a.label }}</span>
+                <span class="dp-mail">{{ a.email }}</span>
+              </button>
+            }
+          </div>
+        </section>
 
       </div>
     </div>`,
@@ -272,8 +238,12 @@ export class Login {
   private auth = inject(AuthService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
-  left = LEFT;
-  right = RIGHT;
+  filters = DEMO_FILTERS;
+  filter = signal('All');
+  visible = computed(() => {
+    const f = this.filter();
+    return f === 'All' ? DEMO : DEMO.filter((a) => a.role === f);
+  });
 
   /** Four stage nodes sitting on the r=270 loop at 12, 3, 6 and 9 o'clock. */
   stages = [
