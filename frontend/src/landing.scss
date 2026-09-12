@@ -284,3 +284,52 @@
   .demo-panel { flex-direction: row; flex-wrap: wrap; gap: 1rem; }
   .demo-group { flex: 1 1 220px; }
 }
+
+/* ===== Sign-in backdrop: the carbon loop, animated ===== */
+.login-page { position: relative; overflow: hidden; }
+.login-bg { position: absolute; inset: 0; z-index: 0; pointer-events: none; display: grid; place-items: center; }
+.login-bg svg { width: min(120vh, 1100px); height: min(120vh, 1100px); max-width: none; opacity: 0.95; }
+.login-grid { position: relative; z-index: 1; }
+
+/* The card sits over the loop, so keep it opaque and lift it slightly. */
+.login-card { backdrop-filter: blur(2px); }
+
+@keyframes lgSpin { to { transform: rotate(360deg); } }
+@keyframes lgSpinBack { to { transform: rotate(-360deg); } }
+.lg-spin-cw, .lg-spin-ccw { transform-origin: 450px 450px; }
+.lg-spin-cw { animation: lgSpin 90s linear infinite; }
+.lg-spin-ccw { animation: lgSpinBack 60s linear infinite; }
+
+/* The loop draws itself round and round rather than sitting static. */
+@keyframes lgTrace { to { stroke-dashoffset: -1696; } }
+.lg-trace { stroke-dasharray: 140 1556; animation: lgTrace 14s linear infinite; }
+
+@keyframes lgBreathe {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.06); opacity: 1; }
+}
+.lg-breathe { transform-origin: 450px 450px; animation: lgBreathe 7s ease-in-out infinite; }
+
+@keyframes lgPulse {
+  0%, 100% { opacity: 0.45; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.18); }
+}
+.lg-node { transform-origin: 450px 450px; animation: lgPulse 6s ease-in-out infinite; }
+
+@keyframes lgDrift {
+  0% { transform: translateY(0) scale(1); opacity: 0; }
+  15% { opacity: 0.5; }
+  85% { opacity: 0.35; }
+  100% { transform: translateY(-190px) scale(0.5); opacity: 0; }
+}
+.lg-mote { animation-name: lgDrift; animation-timing-function: ease-in-out; animation-iteration-count: infinite; opacity: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lg-spin-cw, .lg-spin-ccw, .lg-trace, .lg-breathe, .lg-node, .lg-mote { animation: none; }
+  .lg-trace { stroke-dasharray: none; }
+  .lg-mote { opacity: 0.3; }
+  .login-bg svg animateMotion { display: none; }
+}
+@media (max-width: 1080px) {
+  .login-bg svg { width: min(140vw, 900px); height: min(140vw, 900px); opacity: 0.6; }
+}

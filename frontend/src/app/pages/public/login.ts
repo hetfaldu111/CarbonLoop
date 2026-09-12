@@ -52,6 +52,77 @@ const RIGHT: DemoGroup[] = [
   imports: [FormsModule, RouterLink, Alert],
   template: `
     <div class="login-page">
+
+      <!-- Ambient carbon-loop backdrop. Decorative only. -->
+      <div class="login-bg" aria-hidden="true">
+        <svg viewBox="0 0 900 900" preserveAspectRatio="xMidYMid slice">
+          <defs>
+            <radialGradient id="lgGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#30BE69" stop-opacity="0.22" />
+              <stop offset="55%" stop-color="#30BE69" stop-opacity="0.08" />
+              <stop offset="100%" stop-color="#30BE69" stop-opacity="0" />
+            </radialGradient>
+            <!-- one shared circular track per radius -->
+            <path id="lgTrack270" d="M 450,180 a 270,270 0 1,1 0,540 a 270,270 0 1,1 0,-540" />
+            <path id="lgTrack200" d="M 450,250 a 200,200 0 1,1 0,400 a 200,200 0 1,1 0,-400" />
+            <g id="lgMolecule">
+              <circle cx="-11" cy="0" r="5.5" fill="#30BE69" opacity="0.7" />
+              <circle cx="0" cy="0" r="7.5" fill="#1A3C2A" opacity="0.85" />
+              <circle cx="11" cy="0" r="5.5" fill="#30BE69" opacity="0.7" />
+              <line x1="-11" y1="0" x2="11" y2="0" stroke="#1A3C2A" stroke-width="1.3" opacity="0.45" />
+            </g>
+          </defs>
+
+          <circle cx="450" cy="450" r="430" fill="url(#lgGlow)" />
+
+          <!-- rings: outer and inner turn in opposite directions -->
+          <g class="lg-spin-cw">
+            <circle cx="450" cy="450" r="340" fill="none" stroke="#1A3C2A" stroke-opacity="0.2"
+                    stroke-width="1.2" stroke-dasharray="2 14" stroke-linecap="round" />
+          </g>
+          <circle cx="450" cy="450" r="305" fill="none" stroke="#30BE69" stroke-opacity="0.16" stroke-width="1.1" />
+          <g class="lg-spin-ccw">
+            <circle cx="450" cy="450" r="200" fill="none" stroke="#1A3C2A" stroke-opacity="0.24"
+                    stroke-width="1.4" stroke-dasharray="18 12" stroke-linecap="round" />
+          </g>
+          <circle class="lg-breathe" cx="450" cy="450" r="130" fill="none"
+                  stroke="#30BE69" stroke-opacity="0.22" stroke-width="1.2" stroke-dasharray="1 9" stroke-linecap="round" />
+
+          <!-- the loop itself, drawn as a travelling arc -->
+          <circle class="lg-trace" cx="450" cy="450" r="270" fill="none"
+                  stroke="#30BE69" stroke-opacity="0.62" stroke-width="2.6" stroke-linecap="round" />
+
+          <!-- four stage nodes on the loop -->
+          @for (s of stages; track s.label) {
+            <g class="lg-node" [style.animation-delay]="s.delay">
+              <circle [attr.cx]="s.x" [attr.cy]="s.y" r="7" fill="#EFF5F0" stroke="#1A3C2A" stroke-opacity="0.45" stroke-width="1.3" />
+              <circle [attr.cx]="s.x" [attr.cy]="s.y" r="2.6" fill="#30BE69" />
+            </g>
+          }
+
+          <!-- CO2 molecules riding the loop -->
+          @for (m of molecules; track m.begin) {
+            <use href="#lgMolecule" opacity="0.9">
+              <animateMotion [attr.dur]="m.dur" repeatCount="indefinite" [attr.begin]="m.begin"
+                             rotate="auto" keyPoints="0;1" keyTimes="0;1" calcMode="linear">
+                <mpath href="#lgTrack270" />
+              </animateMotion>
+            </use>
+          }
+          <use href="#lgMolecule" opacity="0.5" transform="scale(0.72)" transform-origin="450 450">
+            <animateMotion dur="26s" repeatCount="indefinite" begin="-6s" rotate="auto">
+              <mpath href="#lgTrack200" />
+            </animateMotion>
+          </use>
+
+          <!-- drifting motes -->
+          @for (d of motes; track d.cx) {
+            <circle class="lg-mote" [attr.cx]="d.cx" [attr.cy]="d.cy" [attr.r]="d.r"
+                    fill="#30BE69" [style.animation-duration]="d.dur" [style.animation-delay]="d.delay" />
+          }
+        </svg>
+      </div>
+
       <div class="login-grid">
 
         <!-- left demo panel -->
@@ -130,6 +201,29 @@ export class Login {
   private route = inject(ActivatedRoute);
   left = LEFT;
   right = RIGHT;
+
+  /** Four stage nodes sitting on the r=270 loop at 12, 3, 6 and 9 o'clock. */
+  stages = [
+    { label: 'capture', x: 450, y: 180, delay: '0s' },
+    { label: 'passport', x: 720, y: 450, delay: '1.5s' },
+    { label: 'transport', x: 450, y: 720, delay: '3s' },
+    { label: 'utilize', x: 180, y: 450, delay: '4.5s' },
+  ];
+  /** Staggered negative begins so the molecules are already spread around the loop on load. */
+  molecules = [
+    { dur: '18s', begin: '0s' },
+    { dur: '18s', begin: '-4.5s' },
+    { dur: '18s', begin: '-9s' },
+    { dur: '18s', begin: '-13.5s' },
+  ];
+  motes = [
+    { cx: 170, cy: 700, r: 3, dur: '13s', delay: '0s' },
+    { cx: 300, cy: 780, r: 2, dur: '17s', delay: '2s' },
+    { cx: 620, cy: 750, r: 2.5, dur: '15s', delay: '4s' },
+    { cx: 760, cy: 690, r: 2, dur: '19s', delay: '1s' },
+    { cx: 240, cy: 320, r: 2, dur: '21s', delay: '6s' },
+    { cx: 690, cy: 270, r: 2.5, dur: '16s', delay: '3s' },
+  ];
   email = '';
   password = '';
   show = signal(false);
