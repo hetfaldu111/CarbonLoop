@@ -717,4 +717,31 @@
   .em-sum-grid .v { font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 700; color: #0d2318; }
   .em-sum-grid .l { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: rgba(13, 35, 24, 0.4); margin-top: 2px; }
   @media (max-width: 760px) { .em-sum-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+  /* Ranked bid ladder, matching the design's auction card */
+  .em-ladder { display: flex; flex-direction: column; gap: 8px; }
+  .em-bid {
+    display: flex; align-items: center; gap: 12px; padding: 10px 12px;
+    border-radius: 12px; background: rgba(13, 35, 24, 0.02); border: 1px solid rgba(13, 35, 24, 0.06);
+  }
+  .em-bid.top { background: rgba(34, 197, 94, 0.07); border-color: rgba(34, 197, 94, 0.22); }
+  .em-bid .rank {
+    width: 26px; height: 26px; flex: none; border-radius: 50%; display: grid; place-items: center;
+    background: rgba(13, 35, 24, 0.07); color: rgba(13, 35, 24, 0.45);
+    font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 700;
+  }
+  .em-bid.top .rank { background: #22c55e; color: #fff; }
+  .em-bid .who { flex: 1; min-width: 0; }
+  .em-bid .nm { font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 600; color: #0d2318; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .em-bid .sub { font-family: 'Outfit', sans-serif; font-size: 11px; color: rgba(13, 35, 24, 0.45); margin-top: 2px; }
+  .em-bid .amt { flex: none; text-align: right; font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 700; color: #0d2318; }
+  .em-bid.top .amt { color: #15803d; }
+  .em-bid .amt span { display: block; font-size: 11px; font-weight: 500; color: rgba(13, 35, 24, 0.4); }
+
+  .em-ac-winner .w-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 3px; font-family: 'Outfit', sans-serif; font-size: 11px; color: rgba(13, 35, 24, 0.45); }
+  .em-ac-next .s { font-family: 'Outfit', sans-serif; font-size: 11px; color: rgba(13, 35, 24, 0.4); margin-top: 2px; }
+  .em-ac-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: auto; padding-top: 4px; }
+  .em-ac-right .em-btn { align-self: auto; margin-top: 0; }
+  .em-ac.done { opacity: 0.92; }
+  .em-ac.done .em-ac-price { color: rgba(13, 35, 24, 0.55); }
 }
