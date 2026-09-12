@@ -109,10 +109,14 @@ const NAV: Record<Role, NavItem[]> = {
           <a class="who" [routerLink]="home()" title="Go to your dashboard">
             <span class="name">{{ user()?.companyName }}</span>
             <app-tier-badge [tier]="tier()" [basis]="basis()" />
-            <span class="muted small">{{ user()?.fullName }}</span>
           </a>
           <div class="row">
-            <a class="bell" routerLink="/notifications" title="Notifications">🔔 @if (notif.unread() > 0) {<span class="count">{{ notif.unread() }}</span>}</a>
+            <a class="bell" routerLink="/notifications" title="Notifications">
+              <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M8 1.5a4.5 4.5 0 00-4.5 4.5c0 2.5-.8 3.5-1.5 4.5h12c-.7-1-1.5-2-1.5-4.5A4.5 4.5 0 008 1.5z" />
+                <path d="M6.5 13.5a1.5 1.5 0 003 0" />
+              </svg>
+              @if (notif.unread() > 0) {<span class="count">{{ notif.unread() }}</span>}</a>
             <button class="btn btn-sm" (click)="auth.logout()">Log out</button>
           </div>
         </header>

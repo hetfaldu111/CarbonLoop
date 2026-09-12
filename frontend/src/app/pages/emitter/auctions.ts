@@ -23,30 +23,67 @@ import { countdown } from '../shared/auction-room';
     @else {
       @if (live().length) {
         <h3 class="section-title">Live now <span class="live-dot"></span></h3>
-        <div class="grid grid-2 mb">
+        <div class="em-stack mb">
           @for (a of live(); track a.listingId) {
-            <div class="card auction-card live-card">
-              <div class="ac-top">
-                <a class="mono" [routerLink]="['/emitter/auctions', a.listingId]">{{ a.passportCode }}</a>
-                <app-status-badge [value]="a.status" />
-                <span class="muted small">{{ clock(a) }} left</span>
+            <div class="em-ac">
+              <!-- header: identity left, countdown right -->
+              <div class="em-ac-head">
+                <div>
+                  <div class="em-ac-tags">
+                    <span class="badge status-auction">Auction</span>
+                    <span class="em-mono">{{ a.passportCode }}</span>
+                  </div>
+                  <div class="em-ac-title">{{ a.volumeTonnes | tonnes }} lot · {{ a.concentrationPct }}% CO₂</div>
+                  <div class="em-ac-meta">
+                    <span>Base {{ a.basePricePerTonne | money }}/t</span><span>·</span>
+                    <span>Min raise {{ a.bidIncrement | money }}/t</span><span>·</span>
+                    <span>{{ a.city }}, {{ a.state }}</span>
+                  </div>
+                </div>
+                <div class="em-ac-timer">
+                  <div class="em-mono-label">Time remaining</div>
+                  <div class="em-ac-clock" [style.color]="urgency(a)">{{ clock(a) }}</div>
+                  @if (a.secondsRemaining < 300) {<div class="em-ac-soon">⚡ Closing soon</div>}
+                </div>
               </div>
-              <div class="ac-price">{{ (a.currentPricePerTonne ?? a.basePricePerTonne) | money }}<span class="per">/t</span></div>
-              <div class="muted small">{{ a.bidCount }} {{ a.bidCount === 1 ? 'bid' : 'bids' }} · lot total {{ (a.currentTotal ?? a.basePricePerTonne * a.volumeTonnes) | money }} · opened at {{ a.basePricePerTonne | money }}/t (+{{ a.bidIncrement | money }} per bid)</div>
-              @if (a.leader) {
-                <div class="ac-won lead">Leading: {{ a.leader.displayName }} <app-tier-badge [tier]="a.leader.tier" /></div>
-              } @else {
-                <div class="ac-won muted">No bids yet</div>
-              }
-              @if (a.bids.length) {
-                <table class="table compact mt">
-                  <thead><tr><th>Bidder</th><th class="r">Price / t</th><th>Placed</th></tr></thead>
-                  <tbody>@for (b of a.bids.slice(0, 4); track b.placedAt) {
-                    <tr><td>{{ b.displayName }}</td><td class="r">{{ b.amountPerTonne | money }}</td><td>{{ b.placedAt | date:'HH:mm:ss' }}</td></tr>
-                  }</tbody>
-                </table>
-              }
-              <a class="btn btn-sm mt" [routerLink]="['/emitter/auctions', a.listingId]">Open the room</a>
+
+              <div class="em-ac-body">
+                <!-- left: the standing bid -->
+                <div class="em-ac-left">
+                  <div class="em-mono-label">Current highest bid</div>
+                  <div class="em-ac-price">{{ (a.currentPricePerTonne ?? a.basePricePerTonne) | money }}<span>/t</span></div>
+                  <div class="em-ac-total">Total value: {{ (a.currentTotal ?? a.basePricePerTonne * a.volumeTonnes) | money }}</div>
+                  @if (a.leader) {
+                    <div class="em-ac-winner">
+                      <span class="n">1</span>
+                      <div>
+                        <div class="em-strong">{{ a.leader.displayName }}</div>
+                        <app-tier-badge [tier]="a.leader.tier" />
+                      </div>
+                    </div>
+                  } @else {
+                    <div class="em-ac-nobids">No bids yet. The lot opens at {{ a.basePricePerTonne | money }}/t.</div>
+                  }
+                  <div class="em-ac-next">
+                    <div class="l">Next bid will be at least</div>
+                    <div class="v">{{ a.nextBidPricePerTonne | money }}/t</div>
+                  </div>
+                </div>
+
+                <!-- right: real bid history -->
+                <div class="em-ac-right">
+                  <div class="em-mono-label">Bid history · {{ a.bidCount }} {{ a.bidCount === 1 ? 'bid' : 'bids' }}</div>
+                  @if (a.bids.length) {
+                    <table class="table compact">
+                      <thead><tr><th>Bidder</th><th class="r">Price / t</th><th class="r">Lot total</th><th>Placed</th></tr></thead>
+                      <tbody>@for (b of a.bids.slice(0, 6); track b.placedAt) {
+                        <tr><td>{{ b.displayName }} <app-tier-badge [tier]="b.tier" /></td><td class="r">{{ b.amountPerTonne | money }}</td><td class="r">{{ b.totalAmount | money }}</td><td class="em-mono">{{ b.placedAt | date:'HH:mm:ss' }}</td></tr>
+                      }</tbody>
+                    </table>
+                  } @else {<div class="em-empty"><span class="ico">◌</span>Nobody has bid yet.</div>}
+                  <a class="em-btn em-btn-out em-btn-sm" [routerLink]="['/emitter/auctions', a.listingId]">Open the room →</a>
+                </div>
+              </div>
             </div>
           }
         </div>
@@ -113,4 +150,9 @@ export class EmitterAuctions implements OnDestroy {
     });
   }
   clock(a: AuctionStateDto): string { return countdown(a.secondsRemaining); }
+  /** Green with time in hand, amber under 15 minutes, red under 5 — as in the design. */
+  urgency(a: AuctionStateDto): string {
+    const s = a.secondsRemaining ?? 0;
+    return s < 300 ? '#ef4444' : s < 900 ? '#f59e0b' : '#22c55e';
+  }
 }

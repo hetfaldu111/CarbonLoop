@@ -546,4 +546,91 @@
 
   /* Allocation bar reuse */
   .stacked-bar { border-radius: 99px; overflow: hidden; }
+
+  /* Passport detail: identity above volume on the left, impurities alongside both. */
+  .pp-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+  .pp-left { display: flex; flex-direction: column; gap: 16px; }
+  .pp-left .card + .card, .pp-right .card + .card { margin-top: 0; }
+  @media (max-width: 980px) { .pp-cols { grid-template-columns: 1fr; } }
+
+  /* New-listing form: one centred card, per the design */
+  .nl-wrap { max-width: 620px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+  .nl-back { font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 600; color: rgba(13, 35, 24, 0.5); width: fit-content; }
+  .nl-back:hover { color: #0d2318; text-decoration: none; }
+  .nl-head h1 { font-family: 'Fraunces', serif; font-size: 30px; font-weight: 700; color: #0d2318; margin: 0 0 4px; }
+  .nl-head p { font-family: 'Outfit', sans-serif; font-size: 13px; color: rgba(13, 35, 24, 0.5); margin: 0; }
+  .nl-card {
+    background: #fff; border-radius: 16px; border: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04); padding: 28px 32px;
+    display: flex; flex-direction: column; gap: 18px;
+  }
+  .nl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 22px; }
+  .nl-full { grid-column: 1 / -1; }
+  .nl-modes { display: flex; gap: 8px; }
+  .nl-mode {
+    flex: 1; padding: 10px 0; border-radius: 8px; cursor: pointer;
+    border: 1.5px solid rgba(13, 35, 24, 0.14); background: transparent;
+    font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 600; color: rgba(13, 35, 24, 0.5);
+    transition: all 0.15s ease;
+  }
+  .nl-mode:hover { border-color: rgba(13, 35, 24, 0.3); color: #0d2318; }
+  .nl-mode.on { border-color: #22c55e; background: rgba(34, 197, 94, 0.08); color: #15803d; }
+  .nl-foot {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    margin-top: 6px; padding-top: 18px; border-top: 1px solid rgba(13, 35, 24, 0.07);
+  }
+  .nl-lock { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: rgba(13, 35, 24, 0.4); }
+  .nl-card .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 22px; }
+  @media (max-width: 720px) {
+    .nl-grid, .nl-card .form-row { grid-template-columns: 1fr; }
+  }
+
+  /* Live auction cards, per the design */
+  .em-stack { display: flex; flex-direction: column; gap: 16px; }
+  .em-ac { background: #fff; border-radius: 16px; border: 1px solid rgba(0,0,0,0.06); box-shadow: 0 1px 4px rgba(0,0,0,0.04); overflow: hidden; }
+  .em-ac-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 20px 24px; border-bottom: 1px solid rgba(13,35,24,0.06); }
+  .em-ac-tags { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .em-ac-title { font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 700; color: #0d2318; }
+  .em-ac-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 5px; font-family: 'Outfit', sans-serif; font-size: 11px; color: rgba(13,35,24,0.45); }
+  .em-ac-timer { flex: none; text-align: right; }
+  .em-ac-clock { font-family: 'Outfit', sans-serif; font-size: 22px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+  .em-ac-soon { font-size: 11px; font-weight: 600; color: #ef4444; margin-top: 4px; }
+  .em-ac-body { display: grid; grid-template-columns: 1fr 1.4fr; }
+  .em-ac-left { padding: 20px 24px; border-right: 1px solid rgba(13,35,24,0.06); }
+  .em-ac-right { padding: 20px 24px; display: flex; flex-direction: column; gap: 10px; }
+  .em-ac-price { font-family: 'Outfit', sans-serif; font-size: 36px; font-weight: 800; line-height: 1; color: #0d2318; margin: 8px 0 2px; }
+  .em-ac-price span { font-size: 14px; font-weight: 500; color: rgba(13,35,24,0.4); margin-left: 4px; }
+  .em-ac-total { font-size: 11px; color: rgba(13,35,24,0.45); margin-bottom: 14px; }
+  .em-ac-winner { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 12px; background: rgba(34,197,94,0.06); border: 1px solid rgba(34,197,94,0.15); }
+  .em-ac-winner .n { width: 34px; height: 34px; flex: none; border-radius: 50%; display: grid; place-items: center; background: rgba(34,197,94,0.12); border: 1.5px solid rgba(34,197,94,0.3); font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 13px; color: #22c55e; }
+  .em-ac-nobids { padding: 12px; border-radius: 12px; background: rgba(13,35,24,0.03); border: 1px dashed rgba(13,35,24,0.12); font-size: 12px; color: rgba(13,35,24,0.5); }
+  .em-ac-next { margin-top: 14px; padding: 12px; border-radius: 12px; text-align: center; background: rgba(13,35,24,0.03); border: 1px dashed rgba(13,35,24,0.1); }
+  .em-ac-next .l { font-family: 'Outfit', sans-serif; font-size: 11px; font-weight: 500; color: rgba(13,35,24,0.5); }
+  .em-ac-next .v { font-family: 'Outfit', sans-serif; font-size: 20px; font-weight: 800; color: #0d2318; margin-top: 2px; }
+  .em-ac-right .em-btn { align-self: flex-start; margin-top: auto; }
+  @media (max-width: 900px) {
+    .em-ac-body { grid-template-columns: 1fr; }
+    .em-ac-left { border-right: none; border-bottom: 1px solid rgba(13,35,24,0.06); }
+  }
+
+  /* Section titles and the live dot */
+  .section-title { font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 700; color: #0d2318; display: flex; align-items: center; gap: 8px; margin: 0 0 12px; }
+  .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; animation: e-pulse 2s ease-in-out infinite; }
+
+  /* Tabs (agreements list) — the design's .tab */
+  .tabs { display: flex; gap: 4px; }
+  .tabs button {
+    padding: 6px 16px; border-radius: 8px; border: none; background: transparent; cursor: pointer;
+    font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 500; color: rgba(13,35,24,0.45);
+    transition: all 0.14s ease;
+  }
+  .tabs button:hover:not(.active) { background: rgba(13,35,24,0.06); color: #0d2318; }
+  .tabs button.active { background: #0d2318; color: #4ade80; }
+
+  /* Key/value lists (passport + agreement detail) */
+  .kv dt { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 500; letter-spacing: 0.04em; color: rgba(13,35,24,0.4); }
+  .kv dd { font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 600; color: #0d2318; }
+  .mono { font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+  .hint { font-family: 'Outfit', sans-serif; font-size: 11px; color: rgba(13,35,24,0.45); }
+  .section-title + .table-wrap, .section-title + .em-stack { margin-top: 0; }
 }

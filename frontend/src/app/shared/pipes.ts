@@ -37,11 +37,17 @@ export class LabelPipe implements PipeTransform {
   transform(value: string | null | undefined): string {
     if (!value) return '—';
     // Split camelCase ("trustTier" -> "trust Tier") before normalising SNAKE_CASE.
-    return value
+    const words = value
       .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
       .replace(/_/g, ' ')
       .toLowerCase()
-      .replace(/(^|\s)\S/g, (c) => c.toUpperCase());
+      .split(/\s+/)
+      .filter(Boolean);
+    // Acronyms would otherwise read as "Mrv Active" or "Coa Expired".
+    const ACRONYMS = new Set(['mrv', 'coa', 'co2', 'id', 'ppm', 'cin', 'gst', 'sla', 'rfq', 'esg', 'niti', 'cbam', 'ccus']);
+    return words
+      .map((w) => (ACRONYMS.has(w) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1)))
+      .join(' ');
   }
 }
 

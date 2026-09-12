@@ -4,47 +4,50 @@ import { Router, RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api.service';
 import { ListingMode, PassportDto } from '../../core/models';
 import { TonnesPipe } from '../../shared/pipes';
-import { Alert, FieldError, Loading, PageHeader } from '../../shared/widgets';
+import { Alert, FieldError, Loading } from '../../shared/widgets';
 import { Check, FieldErrors, addDays, errMsg, isBlank, scrollToFirstInvalid, toDateInput, toDateTimeInput, toIso } from '../../shared/utils';
 
-const MODES: { mode: ListingMode; title: string; analogy: string; fit: string; price: string }[] = [
-  { mode: 'TENDER', title: 'Tender (RFQ)', analogy: 'Wholesale', fit: 'Buyers with steady, plannable demand who can commit. Larger volume, longer duration.', price: 'Lower, trust-based. You can accept several proposals at once; the system shows the combination that earns the most.' },
-  { mode: 'AUCTION', title: 'Auction', analogy: 'Retail / spot', fit: 'Urgent, one-off, smaller lots. Scheduled live bidding; the last bid when the clock stops wins automatically.', price: 'Higher, urgency premium. Opens at your starting price and climbs by a fixed increment per bid.' },
-  { mode: 'CONTRACT', title: 'Negotiated contract', analogy: 'Bilateral long-term', fit: 'Multi-month guaranteed supply (CBAM, green-steel timelines). Recurring schedule, take-or-pay, escrow.', price: 'Custom, privately agreed via offer / counter-offer thread.' },
+/** Shown in the design's order: Auction, Tender, Contract. */
+const MODES: { mode: ListingMode; short: string; fit: string }[] = [
+  { mode: 'AUCTION', short: 'Auction', fit: 'Spot lots. Scheduled live bidding that opens at your starting price and climbs by a fixed increment; the last bid when the clock stops wins automatically.' },
+  { mode: 'TENDER', short: 'Tender', fit: 'Wholesale. Buyers submit proposals and you may accept several at once; the system shows the combination that earns the most.' },
+  { mode: 'CONTRACT', short: 'Contract', fit: 'Bilateral long-term supply agreed privately through an offer and counter-offer thread.' },
 ];
 
 @Component({
   selector: 'app-listing-form',
-  imports: [FormsModule, RouterLink, TonnesPipe, Alert, FieldError, Loading, PageHeader],
+  imports: [FormsModule, RouterLink, TonnesPipe, Alert, FieldError, Loading],
   template: `
-    <app-page-header title="List CO₂ for sale" subtitle="Choose the sale mode per listing. Listed volume is locked on the passport immediately so it cannot be double-sold." />
-    <app-alert [message]="error()" />
-    @if (loading()) {<app-loading />}
-    @else if (!passports().length) {<div class="alert alert-warn">You have no VERIFIED passports. A lab must issue a Certificate of Analysis before you can list.</div>}
-    @else {
-      <form class="form" (ngSubmit)="submit()">
-        <div class="card">
-          <h3>1. Passport</h3>
-          <div class="field"><label>Verified CO₂ Passport</label>
-            <select name="passportId" [(ngModel)]="f.passportId" (ngModelChange)="onPassport()">@for (p of passports(); track p.id) {<option [value]="p.id">{{ p.passportCode }} — {{ p.source }} · {{ p.concentrationPct }}% · free {{ p.totalVolumeTonnes - p.allocatedTonnes | tonnes }}</option>}</select>
+    <div class="nl-wrap">
+      <a class="nl-back" routerLink="/emitter/listings">← Back to Listings</a>
+      <div class="nl-head">
+        <h1>New Listing</h1>
+        <p>Publish a CO₂ volume for sale or tender. Listed volume is locked on the passport immediately, so it cannot be double-sold.</p>
+      </div>
+      <app-alert [message]="error()" />
+      @if (loading()) {<app-loading />}
+      @else if (!passports().length) {<div class="alert alert-warn">You have no VERIFIED passports. A lab must issue a Certificate of Analysis before you can list.</div>}
+      @else {
+      <form class="form nl-card" (ngSubmit)="submit()">
+        <div class="nl-grid">
+          <div class="nl-full">
+            <div class="field"><label>CO₂ Passport</label>
+              <select name="passportId" [(ngModel)]="f.passportId" (ngModelChange)="onPassport()">@for (p of passports(); track p.id) {<option [value]="p.id">{{ p.passportCode }} — {{ p.source }} · {{ p.concentrationPct }}% · free {{ p.totalVolumeTonnes - p.allocatedTonnes | tonnes }}</option>}</select>
+            </div>
           </div>
-        </div>
-        <div class="card">
-          <h3>2. Sale mode</h3>
-          <div class="mode-cards">
-            @for (m of modes; track m.mode) {
-              <div class="mode-card" [class.selected]="f.mode === m.mode" (click)="f.mode = m.mode">
-                <h4>{{ m.title }} <span class="muted small">· {{ m.analogy }}</span></h4>
-                <p><strong>Fit:</strong> {{ m.fit }}</p>
-                <p class="mt" style="margin-top:0.3rem"><strong>Price:</strong> {{ m.price }}</p>
+          <div class="nl-full">
+            <div class="field"><label>Listing mode</label>
+              <div class="nl-modes">
+                @for (m of modes; track m.mode) {
+                  <button type="button" class="nl-mode" [class.on]="f.mode === m.mode" (click)="f.mode = m.mode">{{ m.short }}</button>
+                }
               </div>
-            }
+              <span class="hint">{{ modeFit() }}</span>
+            </div>
           </div>
-          @if (f.mode === 'CONTRACT') {<div class="alert alert-info mt">Contract listings advertise availability; the actual deal is done through a private negotiation thread. Utilizers can direct-connect from this listing.</div>}
         </div>
-        <div class="card">
-          <h3>3. Terms</h3>
-          <div class="form-row">
+        @if (f.mode === 'CONTRACT') {<div class="alert alert-info">Contract listings advertise availability; the actual deal is done through a private negotiation thread. Utilizers can direct-connect from this listing.</div>}
+        <div class="form-row">
             <div class="field" [class.invalid]="fe()['volumeTonnes']"><label>Volume to list (t) <span class="required-star">*</span></label><input type="number" step="0.1" name="volumeTonnes" [(ngModel)]="f.volumeTonnes" required [attr.aria-invalid]="fe()['volumeTonnes'] ? 'true' : null" /><span class="hint">Free on this passport: <strong>{{ free() | tonnes }}</strong></span><app-field-error [msg]="fe()['volumeTonnes']" /></div>
             <div class="field" [class.invalid]="fe()['basePricePerTonne']"><label>{{ f.mode === 'AUCTION' ? 'Starting price (₹ / t)' : 'Base price (₹ / t)' }} <span class="required-star">*</span></label><input type="number" name="basePricePerTonne" [(ngModel)]="f.basePricePerTonne" required [attr.aria-invalid]="fe()['basePricePerTonne'] ? 'true' : null" /><app-field-error [msg]="fe()['basePricePerTonne']" /></div>
             @if (f.mode === 'AUCTION') {<div class="field" [class.invalid]="fe()['bidIncrement']"><label>Increment per bid (₹ / t) <span class="required-star">*</span></label><input type="number" step="1" name="bidIncrement" [(ngModel)]="f.bidIncrement" required [attr.aria-invalid]="fe()['bidIncrement'] ? 'true' : null" /><span class="hint">Every bid raises the price by exactly this much.</span><app-field-error [msg]="fe()['bidIncrement']" /></div>}
@@ -74,11 +77,15 @@ const MODES: { mode: ListingMode; title: string; analogy: string; fit: string; p
             <div class="alert alert-info">{{ auctionSummary() }}</div>
             @if (startInPast()) {<div class="alert alert-warn">The opening time is in the past. Pick a future time.</div>}
           }
-          <div class="field"><label>Description (public)</label><textarea name="description" [(ngModel)]="f.description" placeholder="What buyers should know. Company identity stays hidden until a proposal is made."></textarea></div>
+          <div class="field"><label>Description (public)</label><textarea name="description" [(ngModel)]="f.description" rows="3" placeholder="Delivery terms, special requirements… Company identity stays hidden until a proposal is made."></textarea></div>
+        <div class="nl-foot">
+          <button class="em-btn em-btn-green" [disabled]="busy()">{{ f.mode === 'AUCTION' ? 'Schedule Auction' : 'Publish Listing' }}</button>
+          <a class="em-btn em-btn-out" routerLink="/emitter/listings">Cancel</a>
+          <span class="nl-lock">locks {{ f.volumeTonnes | tonnes }} on the passport</span>
         </div>
-        <div class="form-actions"><a class="btn" routerLink="/emitter/listings">Cancel</a><button class="btn btn-primary" [disabled]="busy()">{{ f.mode === 'AUCTION' ? 'Schedule auction' : 'Publish listing' }} &amp; lock {{ f.volumeTonnes | tonnes }}</button></div>
       </form>
-    }`,
+      }
+    </div>`,
 })
 export class ListingForm {
   passportId = input<string>();
@@ -101,6 +108,7 @@ export class ListingForm {
     bidIncrement: 100, scheduledStartAt: toDateTimeInput(new Date(Date.now() + 10 * 60000)), durationMinutes: 30,
   };
 
+  modeFit(): string { return MODES.find((m) => m.mode === this.f.mode)?.fit ?? ''; }
   scheduleTotal(): number { return Math.round((this.f.deliveryMonths ?? 0) * (this.f.monthlyTonnes ?? 0) * 10) / 10; }
   scheduleMismatch(): boolean { return Math.abs(this.scheduleTotal() - +this.f.volumeTonnes) > 0.5; }
   syncMonthly(): void {
