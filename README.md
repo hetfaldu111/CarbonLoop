@@ -40,6 +40,18 @@ npm start          # proxies /api -> http://localhost:8080
 ```
 Open http://localhost:4200
 
+**Low-memory alternative.** `ng serve` needs well over a gigabyte and gets killed on a loaded machine. Build once and serve the static output instead, which runs in about 40 MB and behaves identically (same URL, same `/api` proxy, deep links work):
+```bash
+cd frontend && npm run build && cd ..
+node scripts/serve-frontend.mjs        # http://localhost:4200
+```
+Pair it with the packaged backend rather than Maven to save another few hundred megabytes:
+```bash
+cd backend && ./mvnw -DskipTests package && cd ..
+java -Xmx512m -jar backend/target/backend-0.0.1-SNAPSHOT.jar
+```
+Rebuild the frontend after editing its source; the static server does not watch files.
+
 ## Demo accounts (password for all: `Password123!`)
 
 | Role | Email | Company |
