@@ -24,18 +24,60 @@ function base(auth: AuthService): string { return auth.hasRole('EMITTER') ? '/em
 
 @Component({
   selector: 'app-negotiations-list',
-  imports: [DatePipe, RouterLink, StatusBadge, MoneyPipe, TonnesPipe, Alert, EmptyState, Loading, PageHeader],
+  imports: [DatePipe, FormsModule, RouterLink, StatusBadge, LabelPipe, MoneyPipe, TonnesPipe, Alert, EmptyState, Loading, PageHeader],
   template: `
-    <app-page-header title="Negotiated contracts" subtitle="Private, bilateral offer / counter-offer threads for multi-month supply. Accepting an offer creates an ACTIVE contract and locks the full committed volume.">
-      <a class="btn btn-primary" [routerLink]="base + '/negotiations/new'">Start a negotiation</a>
-    </app-page-header>
+    <!-- The emitter portal uses the design's card rows; other roles keep the table. -->
+    @if (isEmitter) {
+      <div class="em-ac-header">
+        <h1>Negotiations</h1>
+        <div class="em-ac-tools">
+          <div class="em-search">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true">
+              <circle cx="7" cy="7" r="5" /><path d="M11 11l3.5 3.5" />
+            </svg>
+            <input [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Search negotiations…" aria-label="Search negotiations" />
+          </div>
+          <a class="em-btn em-btn-green" [routerLink]="base + '/negotiations/new'">+ Start a Negotiation</a>
+        </div>
+      </div>
+      <p class="em-ac-sub">Private, bilateral offer and counter-offer threads for multi-month supply. Accepting an offer creates an active contract and locks the committed volume.</p>
+    } @else {
+      <app-page-header title="Negotiated contracts" subtitle="Private, bilateral offer / counter-offer threads for multi-month supply. Accepting an offer creates an ACTIVE contract and locks the full committed volume.">
+        <a class="btn btn-primary" [routerLink]="base + '/negotiations/new'">Start a negotiation</a>
+      </app-page-header>
+    }
     <app-alert [message]="error()" />
     @if (loading()) {<app-loading />}
-    @else if (!rows().length) {<app-empty-state message="No negotiations yet. Direct-connect with a counterparty to propose a long-term contract." icon="⇄" />}
-    @else {
+    @else if (!filtered().length) {<app-empty-state message="No negotiations yet. Direct-connect with a counterparty to propose a long-term contract." icon="⇄" />}
+    @else if (isEmitter) {
+      <div class="em-rows">
+        @for (n of filtered(); track n.id) {
+          <a class="em-row" [routerLink]="[base + '/negotiations', n.id]">
+            <span class="rail" [style.background]="railColour(n.status)"></span>
+            <span class="main">
+              <span class="top">
+                <span class="nm">{{ counterparty(n) }}</span>
+                <app-status-badge [value]="n.status" />
+                <span class="em-mono">v{{ n.offers.length }}</span>
+              </span>
+              <span class="sub">{{ n.passportCode }} · started {{ n.createdAt | date:'mediumDate' }}@if (latest(n); as o) {<span> · {{ o.pricingStructure | label }}@if (o.takeOrPay) {<span> · take-or-pay</span>}</span>}</span>
+            </span>
+            @if (latest(n); as o) {
+              <span class="figs">
+                <span class="v">{{ o.volumePerMonth | tonnes }}/mo × {{ o.durationMonths }}</span>
+                <span class="m">{{ o.pricePerTonne | money }}/t · {{ (o.volumePerMonth * o.durationMonths * o.pricePerTonne) | money }}</span>
+              </span>
+            }
+            <span class="open">Open
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 7h10M8 3l4 4-4 4" /></svg>
+            </span>
+          </a>
+        }
+      </div>
+    } @else {
       <div class="card tight table-wrap"><table class="table">
         <thead><tr><th>Passport</th><th>Emitter</th><th>Utilizer</th><th>Latest offer</th><th>Versions</th><th>Status</th><th>Started</th><th></th></tr></thead>
-        <tbody>@for (n of rows(); track n.id) {
+        <tbody>@for (n of filtered(); track n.id) {
           <tr>
             <td class="mono">{{ n.passportCode }}</td><td>{{ n.emitterName }}</td><td>{{ n.utilizerName }}</td>
             <td class="small">@if (latest(n); as o) {{{ o.volumePerMonth | tonnes }}/mo × {{ o.durationMonths }} mo @ {{ o.pricePerTonne | money }}/t}</td>
@@ -50,10 +92,35 @@ function base(auth: AuthService): string { return auth.hasRole('EMITTER') ? '/em
 })
 export class NegotiationsList {
   private api = inject(ApiService);
-  base = base(inject(AuthService));
+  private auth = inject(AuthService);
+  base = base(this.auth);
+  isEmitter = this.auth.hasRole('EMITTER');
   rows = signal<NegotiationDto[]>([]);
   loading = signal(true);
   error = signal<string | null>(null);
+  search = signal('');
+
+  filtered = computed(() => {
+    const q = this.search().trim().toLowerCase();
+    return this.rows().filter((n) => !q ||
+      [n.passportCode, n.emitterName, n.utilizerName, n.status].some((v) => (v ?? '').toString().toLowerCase().includes(q)));
+  });
+
+  /** The other side of the thread; the signed-in company is always one party. */
+  counterparty(n: NegotiationDto): string {
+    return (this.isEmitter ? n.utilizerName : n.emitterName) || 'Counterparty';
+  }
+  /** Status rail down the left of each row, matching the agreements list. */
+  railColour(status: string): string {
+    switch (status) {
+      case 'ACCEPTED': return '#22c55e';
+      case 'OPEN': return '#f59e0b';
+      case 'REQUESTED': return '#f59e0b';
+      case 'REJECTED': return '#b3261e';
+      default: return 'rgba(13,35,24,0.2)';
+    }
+  }
+
   constructor() {
     this.api.negotiations().subscribe({ next: (r) => { this.rows.set(r); this.loading.set(false); }, error: (e) => { this.error.set(errMsg(e)); this.loading.set(false); } });
   }
