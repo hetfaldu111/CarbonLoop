@@ -11,10 +11,10 @@ import { LabelPipe } from '../shared/pipes';
 interface NavItem { label: string; link: string; icon: string; exact?: boolean; live?: boolean; }
 
 /**
- * Thin-line nav glyphs for the emitter portal, matching the supplied design. Other roles keep
- * the existing text glyphs, so their sidebars are untouched.
+ * Thin-line nav glyphs for the trading portals (emitter and utilizer), matching the supplied
+ * design. The other four roles keep the existing text glyphs, so their sidebars are untouched.
  */
-const EMITTER_ICONS: Record<string, string> = {
+const PORTAL_ICONS: Record<string, string> = {
   dashboard: '<rect x="1" y="1" width="6" height="6" rx="1.5"/><rect x="9" y="1" width="6" height="6" rx="1.5"/><rect x="1" y="9" width="6" height="6" rx="1.5"/><rect x="9" y="9" width="6" height="6" rx="1.5"/>',
   passport: '<rect x="2" y="1" width="12" height="14" rx="1.5"/><line x1="5" y1="5" x2="11" y2="5"/><line x1="5" y1="8" x2="11" y2="8"/><line x1="5" y1="11" x2="8" y2="11"/><circle cx="11" cy="10.5" r="2"/>',
   list: '<rect x="1" y="2" width="14" height="12" rx="2"/><line x1="5" y1="6" x2="11" y2="6"/><line x1="5" y1="8" x2="11" y2="8"/><line x1="5" y1="10" x2="8" y2="10"/>',
@@ -22,6 +22,13 @@ const EMITTER_ICONS: Record<string, string> = {
   agreement: '<path d="M2 4 Q4 2 8 4 Q12 6 14 4"/><path d="M2 8 Q4 6 8 8 Q12 10 14 8"/><path d="M2 12 Q4 10 8 12 Q12 14 14 12"/>',
   negotiation: '<path d="M2 5h12M14 11H2"/><path d="M5 2l3 3-3 3"/><path d="M11 14l-3-3 3-3"/>',
   shipment: '<rect x="1" y="5" width="9" height="8" rx="1"/><path d="M10 7h3l2 3v3h-5V7z"/><circle cx="4" cy="14" r="1.5"/><circle cx="12" cy="14" r="1.5"/>',
+  // Utilizer-side glyphs
+  market: '<line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="14" y2="8"/><line x1="2" y1="12" x2="14" y2="12"/>',
+  bolt: '<path d="M9 1.5L3.5 9H7l-.5 5.5L12.5 7H9l.5-5.5z"/>',
+  proposal: '<path d="M2 9.5V4.2A1.7 1.7 0 013.7 2.5h8.6A1.7 1.7 0 0114 4.2v5.3"/><path d="M2 9.5h3.2l.9 1.8h3.8l.9-1.8H14v2.3a1.7 1.7 0 01-1.7 1.7H3.7A1.7 1.7 0 012 11.8V9.5z"/>',
+  check: '<circle cx="8" cy="8" r="6.3"/><path d="M5.4 8.2l1.9 1.9 3.3-3.7"/>',
+  chat: '<path d="M14 9.4a1.9 1.9 0 01-1.9 1.9H6.2L2.6 14V4.1A1.9 1.9 0 014.5 2.2h7.6A1.9 1.9 0 0114 4.1v5.3z"/>',
+  badge: '<path d="M8 1.6l1.85 3.8 4.15.6-3 2.95.71 4.15L8 11.15 4.29 13.1 5 8.95l-3-2.95 4.15-.6L8 1.6z"/>',
 };
 
 const NAV: Record<Role, NavItem[]> = {
@@ -39,14 +46,15 @@ const NAV: Record<Role, NavItem[]> = {
     { label: 'Shipments', link: '/emitter/shipments', icon: 'shipment' },
   ],
   UTILIZER: [
-    { label: 'Dashboard', link: '/utilizer', icon: '◈', exact: true },
-    { label: 'Marketplace', link: '/utilizer/marketplace', icon: '▣' },
-    { label: 'Auctions', link: '/utilizer/auctions', icon: '⚡' },
-    { label: 'My proposals', link: '/utilizer/proposals', icon: '✉' },
-    { label: 'Agreements', link: '/utilizer/agreements', icon: '✎' },
-    { label: 'Negotiations', link: '/utilizer/negotiations', icon: '⇄' },
-    { label: 'Shipments', link: '/utilizer/shipments', icon: '⛟' },
-    { label: 'Trust profile', link: '/utilizer/trust', icon: '◆' },
+    { label: 'Dashboard', link: '/utilizer', icon: 'dashboard', exact: true },
+    { label: 'Marketplace', link: '/utilizer/marketplace', icon: 'market' },
+    { label: 'Auctions', link: '/utilizer/auctions', icon: 'bolt' },
+    { label: 'My proposals', link: '/utilizer/proposals', icon: 'proposal' },
+    { label: 'Agreements', link: '/utilizer/agreements', icon: 'check' },
+    { label: 'Negotiations', link: '/utilizer/negotiations', icon: 'chat' },
+    { label: 'Shipments', link: '/utilizer/shipments', icon: 'shipment' },
+    // Not in the reference, but /utilizer/trust would otherwise be unreachable.
+    { label: 'Trust profile', link: '/utilizer/trust', icon: 'badge' },
   ],
   TRANSPORT: [
     { label: 'Offers', link: '/transport', icon: '✉', exact: true },
@@ -67,11 +75,11 @@ const NAV: Record<Role, NavItem[]> = {
   selector: 'app-shell',
   imports: [RouterOutlet, RouterLink, RouterLinkActive, TierBadge, LabelPipe],
   template: `
-    <div class="shell" [class.em]="isEmitter">
+    <div class="shell" [class.portal]="portalDesign">
       <aside class="sidebar">
         <a class="brand" [routerLink]="home()">
           <span class="logo">
-            @if (isEmitter) {
+            @if (portalDesign) {
               <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
                 <circle cx="9" cy="9" r="6.5" stroke="#4ade80" stroke-width="1.5" />
                 <circle cx="9" cy="9" r="2.5" fill="#4ade80" />
@@ -86,13 +94,13 @@ const NAV: Record<Role, NavItem[]> = {
               </svg>
             }
           </span>
-          <span>Carbon<span [style.color]="isEmitter ? '#4ade80' : 'var(--eco)'">Loop</span><small>CO₂ marketplace</small></span>
+          <span>Carbon<span [style.color]="portalDesign ? '#4ade80' : 'var(--eco)'">Loop</span><small>CO₂ marketplace</small></span>
         </a>
         <div class="nav-section">{{ role() | label }}</div>
         <nav class="nav">
           @for (n of items(); track n.link) {
             <a [routerLink]="n.link" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: !!n.exact }">
-              @if (isEmitter) {
+              @if (portalDesign) {
                 <span class="ico" [innerHTML]="iconFor(n.icon)"></span>
               } @else {
                 <span class="ico">{{ n.icon }}</span>
@@ -144,12 +152,12 @@ export class Shell {
   home = computed(() => this.auth.homeFor(this.role()));
   tier = signal<Tier | null>(null);
   basis = signal<string | null>(null);
-  /** The emitter portal uses the dark-sidebar design; every other role keeps the light shell. */
-  isEmitter = this.auth.hasRole('EMITTER');
+  /** Emitter and utilizer share the dark trading-portal shell; the other roles keep the light one. */
+  portalDesign = this.auth.hasRole('EMITTER', 'UTILIZER');
 
   /** Wraps a thin-line glyph path in an SVG. Paths are our own constants, never user input. */
   iconFor(key: string): SafeHtml {
-    const body = EMITTER_ICONS[key] ?? '';
+    const body = PORTAL_ICONS[key] ?? '';
     return this.sanitizer.bypassSecurityTrustHtml(
       `<svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`,
     );

@@ -33,7 +33,7 @@
             "styles": [
               "src/styles.scss",
               "src/landing.scss",
-              "src/emitter.scss"
+              "src/portal.scss"
             ]
           },
           "configurations": {

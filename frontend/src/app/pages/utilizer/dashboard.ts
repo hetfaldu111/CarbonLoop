@@ -1,73 +1,98 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { ApiService } from '../../core/api.service';
-import { AgreementDto, ListingDto, NotificationDto, ProposalDto, TrustDto } from '../../core/models';
-import { StatusBadge, TierBadge } from '../../shared/badges';
-import { MoneyPipe, TonnesPipe } from '../../shared/pipes';
-import { Alert, Loading, PageHeader } from '../../shared/widgets';
+import { AgreementDto, ProposalDto, ShipmentDto } from '../../core/models';
+import { Alert, Loading } from '../../shared/widgets';
 import { errMsg } from '../../shared/utils';
 
 @Component({
   selector: 'app-utilizer-dashboard',
-  imports: [RouterLink, StatusBadge, TierBadge, MoneyPipe, TonnesPipe, Alert, Loading, PageHeader],
+  imports: [RouterLink, Alert, Loading],
   template: `
-    <app-page-header title="Utilizer dashboard" subtitle="Discover verified CO₂ supply, estimate full delivered cost, and respond to tenders, auctions or contracts.">
-      <a class="btn btn-primary" routerLink="/utilizer/marketplace">Browse marketplace</a>
-    </app-page-header>
-    <app-alert [message]="error()" />
-    @if (loading()) {<app-loading />}
-    @else {
-      <div class="grid grid-4 mb">
-        <div class="stat"><div class="label">Open supply</div><div class="value">{{ openListings().length }}</div><div class="sub">{{ openVolume() | tonnes }} listed right now</div></div>
-        <div class="stat"><div class="label">My proposals</div><div class="value">{{ liveProposals().length }}</div><div class="sub">awaiting emitter decision</div></div>
-        <div class="stat"><div class="label">Active agreements</div><div class="value">{{ active().length }}</div><div class="sub">{{ activeVolume() | tonnes }} under contract</div></div>
-        <div class="stat"><div class="label">Trust tier</div><div class="value" style="font-size:1.2rem"><app-tier-badge [tier]="trust()?.tier" /></div><div class="sub"><a routerLink="/utilizer/trust">how to improve</a></div></div>
-      </div>
-      @if (shortfalls().length) {
-        <div class="alert alert-warn"><strong>Forecast shortfall alert:</strong> {{ shortfalls()[0].message }} <a routerLink="/notifications">view all</a></div>
+    <div class="em-page">
+      <app-alert [message]="error()" />
+      @if (loading()) {<app-loading />}
+      @else {
+
+        <!-- ===== hero ===== -->
+        <section class="em-card-dark em-hero wide">
+          <div class="em-hero-grid"></div>
+          <div class="em-hero-orb one"></div>
+          <div class="em-hero-orb two"></div>
+          <div class="em-hero-in">
+            <h1>Source CO₂ smarter — <em>bid, propose,</em><br />receive, utilise.</h1>
+            <p>Your central hub for browsing listings, tracking live auctions, managing proposals and monitoring inbound shipments.</p>
+            <div class="em-hero-cta">
+              <a class="em-btn em-btn-green" routerLink="/utilizer/marketplace">
+                <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M7 2v10M2 7h10" /></svg>
+                Browse Marketplace
+              </a>
+              <a class="em-btn em-btn-out" routerLink="/utilizer/auctions">View Auctions</a>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===== three figures ===== -->
+        <section class="em-grid em-grid-3">
+          <a class="em-kpi" routerLink="/utilizer/proposals">
+            <div class="em-kpi-top"><span class="em-mono-label">Open proposals</span></div>
+            <div class="em-kpi-value">{{ openProposals().length }}</div>
+            <div class="em-kpi-sub">awaiting response</div>
+          </a>
+          <a class="em-kpi" routerLink="/utilizer/agreements">
+            <div class="em-kpi-top"><span class="em-mono-label">Active agreements</span></div>
+            <div class="em-kpi-value">{{ activeAgreements().length }}</div>
+            <div class="em-kpi-sub">{{ pendingLab() }} pending lab</div>
+          </a>
+          <a class="em-kpi" routerLink="/utilizer/shipments">
+            <div class="em-kpi-top"><span class="em-mono-label">Inbound shipments</span></div>
+            <div class="em-kpi-value">{{ inbound().length }}</div>
+            <div class="em-kpi-sub">{{ inboundStage() }}</div>
+          </a>
+        </section>
       }
-      <div class="grid grid-2">
-        <div class="card">
-          <h3>Newest supply</h3>
-          @for (l of openListings().slice(0, 6); track l.id) {
-            <div class="row between" style="padding:0.4rem 0;border-bottom:1px solid var(--border)">
-              <span><app-status-badge [value]="l.mode" /> {{ l.volumeTonnes | tonnes }} · {{ l.concentrationPct }}% · {{ l.city }}, {{ l.state }}</span>
-              <a [routerLink]="['/utilizer/listings', l.id]">{{ l.basePricePerTonne | money }}/t ›</a>
-            </div>
-          } @empty {<p class="muted">No open listings.</p>}
-        </div>
-        <div class="card">
-          <h3>My agreements</h3>
-          @for (a of agreements().slice(0, 6); track a.id) {
-            <div class="row between" style="padding:0.4rem 0;border-bottom:1px solid var(--border)">
-              <span><app-status-badge [value]="a.status" /> {{ a.emitterName }} · {{ a.volumeTonnes | tonnes }}</span>
-              <a [routerLink]="['/agreements', a.id]">open ›</a>
-            </div>
-          } @empty {<p class="muted">No agreements yet.</p>}
-        </div>
-      </div>
-    }`,
+    </div>`,
 })
 export class UtilizerDashboard {
   private api = inject(ApiService);
-  listings = signal<ListingDto[]>([]);
   proposals = signal<ProposalDto[]>([]);
   agreements = signal<AgreementDto[]>([]);
-  notifs = signal<NotificationDto[]>([]);
-  trust = signal<TrustDto | null>(null);
+  shipments = signal<ShipmentDto[]>([]);
   loading = signal(true);
   error = signal<string | null>(null);
-  openListings = computed(() => this.listings().filter((l) => l.status === 'OPEN'));
-  openVolume = computed(() => this.openListings().reduce((s, l) => s + l.volumeTonnes, 0));
-  liveProposals = computed(() => this.proposals().filter((p) => p.status === 'SUBMITTED'));
-  active = computed(() => this.agreements().filter((a) => a.status === 'ACTIVE'));
-  activeVolume = computed(() => this.active().reduce((s, a) => s + a.volumeTonnes, 0));
-  shortfalls = computed(() => this.notifs().filter((n) => n.type === 'FORECAST_SHORTFALL' && !n.read));
+
+  openProposals = computed(() => this.proposals().filter((p) => p.status === 'SUBMITTED'));
+  activeAgreements = computed(() => this.agreements().filter((a) => a.status === 'ACTIVE'));
+  pendingLab = computed(() => this.agreements().filter((a) => a.status === 'PENDING_VERIFICATION').length);
+  /** Anything on its way to us: requested, carrier assigned, or moving. */
+  inbound = computed(() => this.shipments().filter((s) => s.status === 'REQUESTED' || s.status === 'ACCEPTED' || s.status === 'IN_TRANSIT'));
+
+  /**
+   * The reference shows an ETA here. Nothing in this system tracks a delivery estimate, so the
+   * sub-line reports the furthest-along chain-of-custody stage instead, which is a real fact.
+   */
+  inboundStage = computed(() => {
+    const s = this.inbound();
+    if (!s.length) return 'none on the way';
+    const moving = s.filter((x) => x.status === 'IN_TRANSIT').length;
+    if (moving) return moving === 1 ? '1 in transit' : `${moving} in transit`;
+    const assigned = s.filter((x) => x.status === 'ACCEPTED').length;
+    if (assigned) return assigned === 1 ? 'carrier assigned' : `${assigned} carriers assigned`;
+    return s.length === 1 ? 'awaiting a carrier' : 'awaiting carriers';
+  });
 
   constructor() {
-    forkJoin({ l: this.api.listings({ status: 'OPEN' }), p: this.api.myProposals(), a: this.api.agreements(), t: this.api.myTrust(), n: this.api.notifications() }).subscribe({
-      next: ({ l, p, a, t, n }) => { this.listings.set(l); this.proposals.set(p); this.agreements.set(a); this.trust.set(t); this.notifs.set(n); this.loading.set(false); },
+    forkJoin({
+      p: this.api.myProposals().pipe(catchError(() => of([] as ProposalDto[]))),
+      a: this.api.agreements().pipe(catchError(() => of([] as AgreementDto[]))),
+      s: this.api.shipments().pipe(catchError(() => of([] as ShipmentDto[]))),
+    }).subscribe({
+      next: ({ p, a, s }) => {
+        this.proposals.set(p); this.agreements.set(a); this.shipments.set(s);
+        this.loading.set(false);
+      },
       error: (e) => { this.error.set(errMsg(e)); this.loading.set(false); },
     });
   }

@@ -1,57 +1,90 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api.service';
 import { INDIAN_STATES, ListingDto } from '../../core/models';
-import { StatusBadge, TierBadge } from '../../shared/badges';
-import { LabelPipe, MoneyPipe, TonnesPipe } from '../../shared/pipes';
-import { Alert, EmptyState, Loading, PageHeader } from '../../shared/widgets';
+import { LabelPipe, MoneyPipe } from '../../shared/pipes';
+import { Alert, EmptyState, Loading } from '../../shared/widgets';
 import { errMsg } from '../../shared/utils';
 
 @Component({
   selector: 'app-marketplace',
-  imports: [DatePipe, DecimalPipe, FormsModule, RouterLink, StatusBadge, TierBadge, LabelPipe, MoneyPipe, TonnesPipe, Alert, EmptyState, Loading, PageHeader],
+  imports: [DatePipe, DecimalPipe, FormsModule, RouterLink, LabelPipe, MoneyPipe, Alert, EmptyState, Loading],
   template: `
-    <app-page-header title="Marketplace" subtitle="Verified CO₂ supply. Emitter identities are hidden until you submit a proposal — only the fields you need to decide are public.">
-      <select [(ngModel)]="mode" (ngModelChange)="load()" style="width:auto"><option value="">All modes</option><option value="TENDER">Tender</option><option value="AUCTION">Auction</option><option value="CONTRACT">Contract</option></select>
-      <select [(ngModel)]="state" (ngModelChange)="load()" style="width:auto"><option value="">All states</option>@for (s of states; track s) {<option [value]="s">{{ s }}</option>}</select>
-      <input type="number" step="0.1" [(ngModel)]="minPurity" (change)="load()" placeholder="Min purity %" style="width:130px" />
-    </app-page-header>
-    <app-alert [message]="error()" />
-    @if (loading()) {<app-loading />}
-    @else if (!rows().length) {<app-empty-state message="No open listings match your filters." icon="▣" />}
-    @else {
-      <div class="grid grid-auto">
-        @for (l of rows(); track l.id) {
-          <div class="card listing-card">
-            <div class="row between">
-              <span class="row" style="gap:.35rem"><app-status-badge [value]="l.mode" />@if (l.mode === 'AUCTION') {<app-status-badge [value]="l.status" />}</span>
-              <span class="muted small">@if (l.mode === 'AUCTION' && l.scheduledStartAt) {opens {{ l.scheduledStartAt | date:'short' }}} @else {closes {{ l.closesAt | date:'mediumDate' }}}</span>
-            </div>
-            <div class="price">{{ (l.mode === 'AUCTION' ? (l.currentPricePerTonne ?? l.basePricePerTonne) : l.basePricePerTonne) | money }} <span class="muted small">/ t @if (l.mode === 'AUCTION') {{{ l.bidCount ? 'current · ' + l.bidCount + ' bids' : 'opening' }}}</span></div>
-            <div class="meta">
-              <span><strong>{{ l.volumeTonnes | tonnes }}</strong> listed</span>
-              <span>{{ l.concentrationPct | number:'1.1-1' }}% CO₂ (min {{ l.minPurityPct }}%)</span>
-              <span>{{ l.physicalState | label }}</span>
-              <span>{{ l.captureTechnology }}</span>
-              <span>{{ l.carbonOrigin | label }}</span>
-              <span>{{ l.city }}, {{ l.state }}</span>
-              @if (l.pipelineConnected) {<span>pipeline ✓</span>}
-            </div>
-            <div class="row between">
-              <span class="small">{{ l.emitterName || 'Emitter hidden' }} <app-tier-badge [tier]="l.emitterTier" /></span>
-              <span class="muted small">{{ l.proposalCount }} proposal{{ l.proposalCount === 1 ? '' : 's' }}</span>
-            </div>
-            @if (l.mode === 'AUCTION') {
-              <a class="btn btn-primary btn-sm" [routerLink]="['/utilizer/auctions', l.id]">{{ l.status === 'LIVE' ? 'Join the live auction' : 'View the auction' }}</a>
-            } @else {
-              <a class="btn btn-primary btn-sm" [routerLink]="['/utilizer/listings', l.id]">Estimate cost &amp; respond</a>
-            }
-          </div>
-        }
+    <div class="em-page">
+
+      <div class="em-head">
+        <h1 class="em-h1">Marketplace</h1>
+        <span class="em-spacer"></span>
+        <div class="em-search">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+            <circle cx="7" cy="7" r="5" /><path d="M11 11l3.5 3.5" />
+          </svg>
+          <input [ngModel]="term()" (ngModelChange)="term.set($event)" placeholder="Search listings..." aria-label="Search listings" />
+        </div>
+        <select class="em-select" [(ngModel)]="mode" (ngModelChange)="load()" aria-label="Filter by mode">
+          <option value="">All</option><option value="TENDER">Tender</option><option value="AUCTION">Auction</option>
+        </select>
+        <select class="em-select" [(ngModel)]="state" (ngModelChange)="load()" aria-label="Filter by state">
+          <option value="">All</option>@for (s of states; track s) {<option [value]="s">{{ s }}</option>}
+        </select>
       </div>
-    }`,
+
+      <app-alert [message]="error()" />
+      @if (loading()) {<app-loading />}
+      @else {
+        <p class="em-count-line">{{ shown().length }} listing{{ shown().length === 1 ? '' : 's' }} available</p>
+
+        @if (!shown().length) {<app-empty-state message="No open listings match your filters." icon="▣" />}
+
+        @for (l of shown(); track l.id) {
+          <article class="em-mk">
+            <div class="em-mk-top">
+              <div class="em-mk-id">
+                <span class="em-pid">{{ l.passportCode }}</span>
+                <span class="em-badge verified">✓ Verified</span>
+                @if (l.mode === 'AUCTION') {<span class="em-badge auction">{{ l.status | label }}</span>}
+              </div>
+              <div class="em-mk-price">
+                <div class="v">{{ (l.mode === 'AUCTION' ? (l.currentPricePerTonne ?? l.basePricePerTonne) : l.basePricePerTonne) | money }}</div>
+                <div class="u">/tonne@if (l.mode === 'AUCTION' && l.bidCount) { · {{ l.bidCount }} bid{{ l.bidCount === 1 ? '' : 's' }}}</div>
+              </div>
+            </div>
+
+            <h3 class="em-mk-title">{{ l.captureTechnology }} · {{ l.physicalState | label }}</h3>
+            <p class="em-mk-seller">
+              @if (l.emitterName) {<strong>{{ l.emitterName }}</strong>} @else {<span class="hidden-id">Supplier revealed once you propose</span>}
+              — {{ l.city }}, {{ l.state }}
+            </p>
+
+            <div class="em-mk-stats">
+              <div class="em-mk-stat"><span class="k">Purity</span><span class="v">{{ l.concentrationPct | number:'1.1-1' }}%</span></div>
+              <div class="em-mk-stat"><span class="k">Available</span><span class="v">{{ l.volumeTonnes | number:'1.0-0' }}t</span></div>
+              <div class="em-mk-stat">
+                <span class="k">{{ l.mode === 'AUCTION' && l.status === 'SCHEDULED' ? 'Opens' : 'Closes' }}</span>
+                <span class="v">{{ (l.mode === 'AUCTION' && l.status === 'SCHEDULED' ? l.scheduledStartAt : l.closesAt) | date:'d MMM' }}</span>
+              </div>
+            </div>
+
+            <div class="em-mk-foot">
+              <div class="em-mk-tags">
+                <span class="em-tag">{{ l.physicalState | label }}</span>
+                <span class="em-tag">{{ l.carbonOrigin | label }}</span>
+                <span class="em-tag">min {{ l.minPurityPct }}%</span>
+                @if (windowDays(l); as d) {<span class="em-tag">🚚 {{ d }}d window</span>}
+                @if (l.pipelineConnected) {<span class="em-tag">pipeline</span>}
+              </div>
+              @if (l.mode === 'AUCTION') {
+                <a class="em-btn em-btn-dark" [routerLink]="['/utilizer/auctions', l.id]">{{ l.status === 'LIVE' ? 'Join Auction' : 'View Auction' }}</a>
+              } @else {
+                <a class="em-btn em-btn-dark" [routerLink]="['/utilizer/listings', l.id]">Make Proposal</a>
+              }
+            </div>
+          </article>
+        }
+      }
+    </div>`,
 })
 export class Marketplace {
   private api = inject(ApiService);
@@ -59,12 +92,35 @@ export class Marketplace {
   rows = signal<ListingDto[]>([]);
   loading = signal(true);
   error = signal<string | null>(null);
-  mode = ''; state = ''; minPurity: number | null = null;
+  mode = ''; state = '';
+  /** Free-text search runs client-side over what has already loaded. */
+  term = signal('');
+
+  shown = computed(() => {
+    const t = this.term().trim().toLowerCase();
+    if (!t) return this.rows();
+    return this.rows().filter((l) =>
+      [l.passportCode, l.captureTechnology, l.physicalState, l.carbonOrigin, l.city, l.state, l.mode]
+        .some((v) => (v ?? '').toString().toLowerCase().includes(t)));
+  });
+
+  /** Length of the real delivery window. Not a lead time; the API has no such field. */
+  windowDays(l: ListingDto): number | null {
+    if (!l.deliveryWindowStart || !l.deliveryWindowEnd) return null;
+    const ms = new Date(l.deliveryWindowEnd).getTime() - new Date(l.deliveryWindowStart).getTime();
+    const d = Math.round(ms / 86400000);
+    return d > 0 ? d : null;
+  }
+
   constructor() { this.load(); }
+
   load(): void {
     this.loading.set(true);
-    this.api.listings({ status: 'OPEN', mode: this.mode || undefined, state: this.state || undefined, minPurity: this.minPurity ?? undefined }).subscribe({
-      next: (r) => { this.rows.set(r); this.loading.set(false); }, error: (e) => { this.error.set(errMsg(e)); this.loading.set(false); },
+    // No status filter: the API's default already returns OPEN tenders plus SCHEDULED and LIVE
+    // auctions. Passing status:'OPEN' would hide every auction, since auctions are never OPEN.
+    this.api.listings({ mode: this.mode || undefined, state: this.state || undefined }).subscribe({
+      next: (r) => { this.rows.set(r); this.loading.set(false); },
+      error: (e) => { this.error.set(errMsg(e)); this.loading.set(false); },
     });
   }
 }
