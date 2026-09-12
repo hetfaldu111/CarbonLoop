@@ -203,8 +203,12 @@
 }
 
 /* ===== Sign-in page: centred card, demo credentials flanking it ===== */
-.login-page { min-height: calc(100vh - 72px); display: grid; place-items: center; padding: 2.5rem 1.25rem 3.5rem; background: var(--bg); }
+/* The public nav is position:fixed at 68px, so it overlays this page. Pad past it and
+   centre what remains, rather than letting the card ride up under the nav. */
+.login-page { min-height: 100vh; display: grid; place-items: center; padding: calc(68px + 3rem) 1.25rem 3.5rem; background: var(--bg); }
 .login-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(360px, 448px) minmax(0, 1fr); gap: 1.75rem; align-items: start; width: 100%; max-width: 1280px; }
+/* The credential panels are taller than the card; centre the card against them. */
+.login-card { align-self: center; }
 
 .login-card {
   background: var(--surface, #fff);
