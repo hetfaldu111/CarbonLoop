@@ -333,3 +333,59 @@
 @media (max-width: 1080px) {
   .login-bg svg { width: min(140vw, 900px); height: min(140vw, 900px); opacity: 0.6; }
 }
+
+/* ===== Wandering molecule doodles on the sign-in page ===== */
+.doodle-layer { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.doodle-layer .dd {
+  position: absolute; top: 0; left: 0; overflow: visible;
+  animation-timing-function: linear; animation-iteration-count: infinite; will-change: transform;
+}
+
+/* Six crossings of the viewport, each entering and leaving from a different edge. */
+@keyframes ddPathA {
+  0%   { transform: translate(-14vw, 78vh) rotate(-12deg); }
+  100% { transform: translate(112vw, 8vh) rotate(196deg); }
+}
+@keyframes ddPathB {
+  0%   { transform: translate(108vw, 88vh) rotate(20deg); }
+  100% { transform: translate(-16vw, -12vh) rotate(-240deg); }
+}
+@keyframes ddPathC {
+  0%   { transform: translate(16vw, 112vh) rotate(0deg); }
+  100% { transform: translate(74vw, -18vh) rotate(180deg); }
+}
+@keyframes ddPathD {
+  0%   { transform: translate(88vw, -16vh) rotate(8deg); }
+  100% { transform: translate(6vw, 114vh) rotate(-212deg); }
+}
+@keyframes ddPathE {
+  0%   { transform: translate(-12vw, 18vh) rotate(-6deg); }
+  100% { transform: translate(110vw, 72vh) rotate(168deg); }
+}
+@keyframes ddPathF {
+  0%   { transform: translate(62vw, 114vh) rotate(14deg); }
+  100% { transform: translate(-14vw, 22vh) rotate(-186deg); }
+}
+.doodle-layer .p-a { animation-name: ddPathA; }
+.doodle-layer .p-b { animation-name: ddPathB; }
+.doodle-layer .p-c { animation-name: ddPathC; }
+.doodle-layer .p-d { animation-name: ddPathD; }
+.doodle-layer .p-e { animation-name: ddPathE; }
+.doodle-layer .p-f { animation-name: ddPathF; }
+
+/* Keep the loop and the doodles behind the content. */
+.login-bg { z-index: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .doodle-layer .dd { animation: none; }
+  /* Park them somewhere sensible instead of stacking at the origin. */
+  .doodle-layer .p-a { transform: translate(8vw, 74vh); }
+  .doodle-layer .p-b { transform: translate(86vw, 16vh); }
+  .doodle-layer .p-c { transform: translate(30vw, 12vh); }
+  .doodle-layer .p-d { transform: translate(72vw, 82vh); }
+  .doodle-layer .p-e { transform: translate(12vw, 34vh); }
+  .doodle-layer .p-f { transform: translate(90vw, 60vh); }
+}
+@media (max-width: 1080px) {
+  .doodle-layer .dd { opacity: 0.22 !important; }
+}
