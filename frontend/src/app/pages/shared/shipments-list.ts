@@ -36,39 +36,62 @@ import { errMsg } from '../../shared/utils';
     @if (loading()) {<app-loading />}
     @else if (!filtered().length) {<app-empty-state message="No shipments yet. Request one from an active agreement." icon="⛟" />}
     @else if (isEmitter) {
-      <div class="em-ship-grid">
+      <div class="em-stack">
         @for (s of filtered(); track s.id) {
-          <a class="em-ship" [class.bad]="isFlagged(s)" [routerLink]="['/shipments', s.id]">
-            <span class="stripe" [style.background]="stageColour(s)"></span>
-            <span class="body">
-              <span class="head">
-                <span class="who">
-                  <span class="nm">{{ s.utilizerName || 'Delivery' }}</span>
-                  <span class="id">{{ s.passportCode }} · {{ s.sealNumber || 'no seal yet' }}</span>
-                </span>
-                <app-status-badge [value]="s.status" />
-              </span>
+          <a class="em-trk" [class.bad]="isFlagged(s)" [routerLink]="['/shipments', s.id]">
 
-              <span class="stats">
-                <span><span class="l">Volume</span><span class="v">{{ s.volumeTonnes | tonnes }}</span></span>
-                <span><span class="l">Mode</span><span class="v">{{ s.transportMode | label }}</span></span>
-                <span><span class="l">Distance</span><span class="v">{{ s.distanceKm | number:'1.0-0' }} km</span></span>
-              </span>
+            <!-- identity -->
+            <div class="trk-head">
+              <div>
+                <div class="trk-ref">
+                  <span class="ref">{{ shortRef(s) }}</span>
+                  <app-status-badge [value]="s.status" />
+                </div>
+                <div class="trk-party">{{ s.utilizerName || 'Delivery' }}</div>
+                <div class="trk-spec">{{ s.passportCode }} · {{ s.transportMode | label }} · {{ s.volumeTonnes | tonnes }}</div>
+              </div>
+              <div class="trk-carrier">
+                <div class="l">Seal ref</div>
+                <div class="v">{{ s.sealNumber || 'not sealed yet' }}</div>
+                <div class="c">{{ s.ownTransport ? 'Own transport' : (s.transportProviderName || 'Awaiting a carrier') }}</div>
+              </div>
+            </div>
 
-              <span class="carrier">{{ s.ownTransport ? 'Own transport' : (s.transportProviderName || 'Awaiting a carrier') }}</span>
+            <!-- route -->
+            <div class="trk-route">
+              <div class="end">
+                <div class="l">From</div>
+                <div class="v">{{ s.emitterName }}</div>
+                <div class="d">{{ s.loadedAt ? (s.loadedAt | date:'mediumDate') : 'not dispatched' }}</div>
+              </div>
+              <div class="line">
+                <span class="mid">{{ s.distanceKm | number:'1.0-0' }} km</span>
+                <span class="arrow">→</span>
+              </div>
+              <div class="end r">
+                <div class="l">To</div>
+                <div class="v">{{ s.utilizerName }}</div>
+                <div class="d">{{ s.deliveredAt ? (s.deliveredAt | date:'mediumDate') : 'in progress' }}</div>
+              </div>
+            </div>
 
-              <span class="prog">
-                <span class="prog-top">
-                  <span class="l">Chain of custody</span>
-                  <span class="pc" [style.color]="stageColour(s)">{{ stageLabel(s) }}</span>
-                </span>
-                <span class="bar"><span class="fill" [style.width.%]="stagePct(s)" [style.background]="stageColour(s)"></span></span>
-              </span>
+            <!-- five-step tracker -->
+            <div class="trk-prog">
+              <div class="l">Progress</div>
+              <ol class="trk-steps">
+                @for (st of steps(s); track st.n) {
+                  <li [class.on]="st.done" [class.flag]="st.flagged">
+                    <span class="dot">@if (st.done) {<span aria-hidden="true">✓</span>} @else {{{ st.n }}}</span>
+                    <span class="t">{{ st.title }}</span>
+                    <span class="w">{{ st.when }}</span>
+                  </li>
+                }
+              </ol>
+            </div>
 
-              @if (s.flags.length) {
-                <span class="flags">@for (f of s.flags; track f) {<span class="flag flag-red">{{ f | label }}</span>}</span>
-              }
-            </span>
+            @if (s.flags.length) {
+              <div class="trk-flags">@for (f of s.flags; track f) {<span class="flag flag-red">{{ f | label }}</span>}</div>
+            }
           </a>
         }
       </div>
@@ -115,31 +138,24 @@ export class ShipmentsList {
 
   isFlagged(s: ShipmentDto): boolean { return s.status === 'FLAGGED' || !!s.flags.length; }
 
+  /** Short, real identifier: the shipment's own id, trimmed for display. */
+  shortRef(s: ShipmentDto): string { return 'SHIP-' + s.id.replace(/-/g, '').slice(-6).toUpperCase(); }
+
   /**
-   * How far along the chain of custody this shipment is. These are real stages the API reports,
-   * not a live position estimate — the API carries no GPS or ETA.
+   * The five real stages of the chain of custody. Every date shown is a timestamp the API
+   * actually reports — there is no ETA, because the platform carries no live tracking.
    */
-  stagePct(s: ShipmentDto): number {
-    switch (s.status) {
-      case 'REQUESTED': return 15;
-      case 'ACCEPTED': return 40;
-      case 'IN_TRANSIT': return 70;
-      default: return 100;
-    }
-  }
-  stageLabel(s: ShipmentDto): string {
-    if (this.isFlagged(s)) return 'Flagged';
-    switch (s.status) {
-      case 'REQUESTED': return 'Awaiting carrier';
-      case 'ACCEPTED': return 'Carrier assigned';
-      case 'IN_TRANSIT': return 'In transit';
-      case 'DELIVERED': return 'Delivered';
-      default: return 'Closed';
-    }
-  }
-  stageColour(s: ShipmentDto): string {
-    if (this.isFlagged(s)) return '#ef4444';
-    return s.status === 'DELIVERED' ? '#22c55e' : s.status === 'IN_TRANSIT' ? '#22c55e' : '#f59e0b';
+  steps(s: ShipmentDto): { n: number; title: string; when: string; done: boolean; flagged: boolean }[] {
+    const moved = s.status === 'IN_TRANSIT' || s.status === 'DELIVERED' || s.status === 'FLAGGED';
+    const assigned = moved || s.status === 'ACCEPTED' || s.ownTransport;
+    const d = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '—');
+    return [
+      { n: 1, title: 'Requested', when: d(s.createdAt), done: true, flagged: false },
+      { n: 2, title: 'Carrier assigned', when: assigned ? (s.ownTransport ? 'own fleet' : 'assigned') : '—', done: assigned, flagged: false },
+      { n: 3, title: 'Loaded & sealed', when: d(s.loadedAt), done: !!s.loadedAt, flagged: false },
+      { n: 4, title: 'In transit', when: moved ? d(s.loadedAt) : '—', done: moved, flagged: false },
+      { n: 5, title: this.isFlagged(s) ? 'Flagged' : 'Delivered', when: d(s.deliveredAt), done: !!s.deliveredAt, flagged: this.isFlagged(s) },
+    ];
   }
 
   constructor() {
