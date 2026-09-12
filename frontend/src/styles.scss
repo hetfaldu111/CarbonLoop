@@ -413,3 +413,19 @@ a.auction-card:hover { border-color: var(--primary); }
 .auction-card .ac-meta dd { margin: 0; font-weight: 600; font-size: 0.9rem; }
 .auction-card .ac-won { margin-top: 0.7rem; padding-top: 0.6rem; border-top: 1px solid var(--border); font-size: 0.88rem; }
 .auction-card .ac-won.lead { color: var(--success); font-weight: 600; }
+
+/* Log out sits at the foot of the sidebar rather than in the top bar. */
+.sidebar-footer { display: flex; }
+.logout-btn {
+  display: flex; align-items: center; gap: 0.55rem; width: 100%;
+  padding: 0.55rem 0.75rem; border-radius: 8px; cursor: pointer;
+  background: transparent; border: 1px solid var(--border);
+  font: inherit; font-size: 0.9rem; font-weight: 600; color: var(--text);
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.logout-btn:hover { background: var(--surface-2); border-color: var(--muted); }
+.logout-btn svg { flex: none; opacity: 0.75; }
+/* The emitter sidebar is dark, so the button needs light-on-dark treatment.
+   Scoped here rather than in emitter.scss to keep that file's ownership clean. */
+.shell.em .logout-btn { color: rgba(255, 255, 255, 0.7); border-color: rgba(255, 255, 255, 0.14); }
+.shell.em .logout-btn:hover { background: rgba(255, 255, 255, 0.07); border-color: rgba(255, 255, 255, 0.3); color: #fff; }

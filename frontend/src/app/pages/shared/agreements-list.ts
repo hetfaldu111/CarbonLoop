@@ -51,13 +51,12 @@ import { errMsg } from '../../shared/utils';
               <span class="top">
                 <span class="nm">{{ counterparty(a) }}</span>
                 <app-status-badge [value]="a.status" />
-                <app-status-badge [value]="a.mode" />
               </span>
-              <span class="sub">{{ a.passportCode }} · {{ a.startsAt | date:'mediumDate' }} → {{ a.endsAt | date:'mediumDate' }}@if (a.volumePerMonth) {<span> · {{ a.volumePerMonth | tonnes }}/mo × {{ a.durationMonths }}</span>}</span>
+              <span class="sub">{{ shortRef(a) }} · {{ durationLabel(a) }}</span>
             </span>
             <span class="figs">
-              <span class="v">{{ a.volumeTonnes | tonnes }}</span>
-              <span class="m">{{ a.totalValue | money }}</span>
+              <span class="v">{{ rateLabel(a) }}</span>
+              <span class="m">{{ compact(a.totalValue) }}</span>
             </span>
             <span class="open">Open
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 7h10M8 3l4 4-4 4" /></svg>
@@ -112,6 +111,35 @@ export class AgreementsList {
     return (this.isEmitter ? a.utilizerName : a.emitterName) || 'Counterparty';
   }
   /** The status rail down the left of each row, as in the design. */
+  /** Short, real identifier taken from the end of the id, since seeded ids begin with zeros. */
+  shortRef(a: AgreementDto): string { return 'AGR-' + a.id.replace(/-/g, '').slice(-6).toUpperCase(); }
+
+  /** Contracts quote a monthly rate; one-off sales quote the lot. */
+  rateLabel(a: AgreementDto): string {
+    return a.volumePerMonth ? `${this.num(a.volumePerMonth)} t/mo` : `${this.num(a.volumeTonnes)} t`;
+  }
+  durationLabel(a: AgreementDto): string {
+    const m = a.durationMonths ?? this.monthsBetween(a.startsAt, a.endsAt);
+    if (!m) return 'single delivery';
+    return `${m} month${m === 1 ? '' : 's'}`;
+  }
+  private monthsBetween(a?: string | null, b?: string | null): number {
+    if (!a || !b) return 0;
+    const s = new Date(a).getTime(), e = new Date(b).getTime();
+    if (isNaN(s) || isNaN(e) || e <= s) return 0;
+    return Math.max(1, Math.round((e - s) / (1000 * 60 * 60 * 24 * 30.44)));
+  }
+  private num(v: number): string { return Number.isInteger(v) ? String(v) : v.toFixed(1); }
+  /** Indian short-scale money, as the reference shows it (₹5.8L). */
+  compact(v?: number | null): string {
+    const n = Number(v ?? 0);
+    if (!n) return '₹0';
+    if (n >= 1e7) return `₹${(n / 1e7).toFixed(n >= 1e8 ? 0 : 1)}Cr`;
+    if (n >= 1e5) return `₹${(n / 1e5).toFixed(n >= 1e6 ? 0 : 1)}L`;
+    if (n >= 1e3) return `₹${(n / 1e3).toFixed(0)}K`;
+    return `₹${n}`;
+  }
+
   railColour(status: string): string {
     switch (status) {
       case 'ACTIVE': return '#22c55e';

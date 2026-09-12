@@ -102,7 +102,16 @@ const NAV: Record<Role, NavItem[]> = {
             </a>
           }
         </nav>
-        <div class="sidebar-footer">Rule-based matching · no AI/ML · no blockchain</div>
+        <div class="sidebar-footer">
+          <button class="logout-btn" (click)="auth.logout()">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M6 14H3.5A1.5 1.5 0 012 12.5v-9A1.5 1.5 0 013.5 2H6" />
+              <path d="M10.5 11L14 8l-3.5-3" /><line x1="14" y1="8" x2="6" y2="8" />
+            </svg>
+            Log out
+          </button>
+        </div>
       </aside>
       <div class="main">
         <header class="topbar">
@@ -117,7 +126,6 @@ const NAV: Record<Role, NavItem[]> = {
                 <path d="M6.5 13.5a1.5 1.5 0 003 0" />
               </svg>
               @if (notif.unread() > 0) {<span class="count">{{ notif.unread() }}</span>}</a>
-            <button class="btn btn-sm" (click)="auth.logout()">Log out</button>
           </div>
         </header>
         <main class="content"><router-outlet /></main>

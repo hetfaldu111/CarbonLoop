@@ -24,12 +24,12 @@ function base(auth: AuthService): string { return auth.hasRole('EMITTER') ? '/em
 
 @Component({
   selector: 'app-negotiations-list',
-  imports: [DatePipe, FormsModule, RouterLink, StatusBadge, LabelPipe, MoneyPipe, TonnesPipe, Alert, EmptyState, Loading, PageHeader],
+  imports: [DatePipe, FormsModule, RouterLink, StatusBadge, MoneyPipe, TonnesPipe, Alert, EmptyState, Loading, PageHeader],
   template: `
     <!-- The emitter portal uses the design's card rows; other roles keep the table. -->
     @if (isEmitter) {
       <div class="em-ac-header">
-        <h1>Negotiations</h1>
+        <h1>Negotiated contracts</h1>
         <div class="em-ac-tools">
           <div class="em-search">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true">
@@ -50,29 +50,30 @@ function base(auth: AuthService): string { return auth.hasRole('EMITTER') ? '/em
     @if (loading()) {<app-loading />}
     @else if (!filtered().length) {<app-empty-state message="No negotiations yet. Direct-connect with a counterparty to propose a long-term contract." icon="⇄" />}
     @else if (isEmitter) {
-      <div class="em-rows">
-        @for (n of filtered(); track n.id) {
-          <a class="em-row" [routerLink]="[base + '/negotiations', n.id]">
-            <span class="rail" [style.background]="railColour(n.status)"></span>
-            <span class="main">
-              <span class="top">
-                <span class="nm">{{ counterparty(n) }}</span>
-                <app-status-badge [value]="n.status" />
-                <span class="em-mono">v{{ n.offers.length }}</span>
-              </span>
-              <span class="sub">{{ n.passportCode }} · started {{ n.createdAt | date:'mediumDate' }}@if (latest(n); as o) {<span> · {{ o.pricingStructure | label }}@if (o.takeOrPay) {<span> · take-or-pay</span>}</span>}</span>
-            </span>
-            @if (latest(n); as o) {
-              <span class="figs">
-                <span class="v">{{ o.volumePerMonth | tonnes }}/mo × {{ o.durationMonths }}</span>
-                <span class="m">{{ o.pricePerTonne | money }}/t · {{ (o.volumePerMonth * o.durationMonths * o.pricePerTonne) | money }}</span>
-              </span>
-            }
-            <span class="open">Open
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 7h10M8 3l4 4-4 4" /></svg>
-            </span>
-          </a>
-        }
+      <div class="em-negt">
+        <table>
+          <thead><tr>
+            <th>Passport</th><th>{{ isEmitter ? 'Utilizer' : 'Emitter' }}</th>
+            <th class="r">Price / t</th><th class="r">Qty</th><th class="r">Duration</th>
+            <th class="c">Ver.</th><th>Started</th><th></th>
+          </tr></thead>
+          <tbody>@for (n of filtered(); track n.id) {
+            <tr (click)="open(n)">
+              <td><span class="pid">{{ n.passportCode }}</span></td>
+              <td class="party">{{ counterparty(n) }}</td>
+              @if (latest(n); as o) {
+                <td class="r price">{{ o.pricePerTonne | money }}/t</td>
+                <td class="r m">{{ o.volumePerMonth }} t/mo</td>
+                <td class="r m">{{ o.durationMonths }} mo</td>
+              } @else {
+                <td class="r price">—</td><td class="r m">—</td><td class="r m">—</td>
+              }
+              <td class="c"><span class="ver">{{ n.offers.length }}</span></td>
+              <td class="m">{{ n.createdAt | date:'mediumDate' }}</td>
+              <td class="r"><app-status-badge [value]="n.status" /></td>
+            </tr>
+          }</tbody>
+        </table>
       </div>
     } @else {
       <div class="card tight table-wrap"><table class="table">
@@ -92,6 +93,7 @@ function base(auth: AuthService): string { return auth.hasRole('EMITTER') ? '/em
 })
 export class NegotiationsList {
   private api = inject(ApiService);
+  private router = inject(Router);
   private auth = inject(AuthService);
   base = base(this.auth);
   isEmitter = this.auth.hasRole('EMITTER');
@@ -110,6 +112,9 @@ export class NegotiationsList {
   counterparty(n: NegotiationDto): string {
     return (this.isEmitter ? n.utilizerName : n.emitterName) || 'Counterparty';
   }
+  /** Row click opens the offer thread. */
+  open(n: NegotiationDto): void { this.router.navigateByUrl(`${this.base}/negotiations/${n.id}`); }
+
   /** Status rail down the left of each row, matching the agreements list. */
   railColour(status: string): string {
     switch (status) {

@@ -859,4 +859,33 @@
     .trk-steps li { flex-direction: row; text-align: left; gap: 10px; }
     .trk-steps li:not(:last-child)::after { display: none; }
   }
+
+  /* Negotiated contracts table, per the user's reference */
+  .em-negt {
+    background: #fff; border-radius: 16px; border: 1px solid rgba(13, 35, 24, 0.08);
+    box-shadow: 0 2px 8px rgba(13, 35, 24, 0.05); overflow-x: auto;
+  }
+  .em-negt table { width: 100%; border-collapse: collapse; }
+  .em-negt th {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 500;
+    letter-spacing: 0.09em; text-transform: uppercase; color: rgba(13, 35, 24, 0.35);
+    text-align: left; padding: 14px 16px; background: transparent; border-bottom: 1px solid rgba(13, 35, 24, 0.06);
+  }
+  .em-negt th.r { text-align: right; }
+  .em-negt th.c { text-align: center; }
+  .em-negt td { padding: 16px; border-bottom: 1px solid rgba(13, 35, 24, 0.05); vertical-align: middle; }
+  .em-negt tbody tr:last-child td { border-bottom: none; }
+  .em-negt tbody tr { cursor: pointer; transition: background 0.12s ease; }
+  .em-negt tbody tr:hover { background: rgba(13, 35, 24, 0.02); }
+  .em-negt td.r { text-align: right; }
+  .em-negt td.c { text-align: center; }
+  .em-negt .pid { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #22c55e; }
+  .em-negt .party { font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 600; color: #0d2318; }
+  .em-negt .price { font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 700; color: #0d2318; }
+  .em-negt td.m { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: rgba(13, 35, 24, 0.45); }
+  .em-negt .ver {
+    display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%;
+    background: rgba(13, 35, 24, 0.06); color: rgba(13, 35, 24, 0.5);
+    font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 600;
+  }
 }
