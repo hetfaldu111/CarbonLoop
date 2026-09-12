@@ -19,6 +19,7 @@ const NAV: Record<Role, NavItem[]> = {
     { label: 'Dashboard', link: '/emitter', icon: '◈', exact: true },
     { label: 'CO₂ Passports', link: '/emitter/passports', icon: '▤' },
     { label: 'Listings', link: '/emitter/listings', icon: '▣' },
+    { label: 'Auctions', link: '/emitter/auctions', icon: '⚡' },
     { label: 'Agreements', link: '/emitter/agreements', icon: '✎' },
     { label: 'Negotiations', link: '/emitter/negotiations', icon: '⇄' },
     { label: 'Shipments', link: '/emitter/shipments', icon: '⛟' },
@@ -26,6 +27,7 @@ const NAV: Record<Role, NavItem[]> = {
   UTILIZER: [
     { label: 'Dashboard', link: '/utilizer', icon: '◈', exact: true },
     { label: 'Marketplace', link: '/utilizer/marketplace', icon: '▣' },
+    { label: 'Auctions', link: '/utilizer/auctions', icon: '⚡' },
     { label: 'My proposals', link: '/utilizer/proposals', icon: '✉' },
     { label: 'Agreements', link: '/utilizer/agreements', icon: '✎' },
     { label: 'Negotiations', link: '/utilizer/negotiations', icon: '⇄' },
@@ -70,7 +72,7 @@ const NAV: Record<Role, NavItem[]> = {
         <header class="topbar">
           <div class="who">
             <span class="name">{{ user()?.companyName }}</span>
-            <app-tier-badge [tier]="tier()" />
+            <app-tier-badge [tier]="tier()" [basis]="basis()" />
             <span class="muted small">{{ user()?.fullName }}</span>
           </div>
           <div class="row">
@@ -90,10 +92,11 @@ export class Shell {
   role = this.auth.role;
   items = computed(() => (this.role() ? NAV[this.role()!] : []));
   tier = signal<Tier | null>(null);
+  basis = signal<string | null>(null);
 
   constructor() {
     if (this.auth.hasRole('EMITTER', 'UTILIZER')) {
-      this.api.myTrust().subscribe({ next: (t) => this.tier.set(t.tier), error: () => {} });
+      this.api.myTrust().subscribe({ next: (t) => { this.tier.set(t.tier); this.basis.set(t.badgeBasis ?? null); }, error: () => {} });
     }
   }
 }

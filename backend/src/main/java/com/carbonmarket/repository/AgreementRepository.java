@@ -15,4 +15,5 @@ public interface AgreementRepository extends JpaRepository<Agreement, UUID> {
     List<Agreement> findByPassportIdAndStatus(UUID passportId, AgreementStatus status);
     List<Agreement> findByStatusIn(Collection<AgreementStatus> statuses);
     List<Agreement> findByStatus(AgreementStatus status);
+    List<Agreement> findByEmitterIdAndStatusIn(UUID emitterId, Collection<AgreementStatus> statuses);
 }

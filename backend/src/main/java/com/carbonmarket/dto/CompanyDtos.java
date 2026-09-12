@@ -26,7 +26,7 @@ public final class CompanyDtos {
 
     public record TrustDto(UUID companyId, String companyName, Tier tier, double hiddenScore, int totalAgreements,
                            int completedAgreements, int cancellationsBeforeExpiry, double cancellationRate,
-                           double completionRate, String formula) {}
+                           double completionRate, String formula, double tonnesSold, String badgeBasis) {}
 
     public record RejectRequest(String reason) {}
 

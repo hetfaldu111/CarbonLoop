@@ -1,7 +1,7 @@
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
@@ -95,6 +95,7 @@ export class UtilizerListingDetail {
   id = input.required<string>();
   private api = inject(ApiService);
   private auth = inject(AuthService);
+  private router = inject(Router);
   impurities = IMPURITIES;
   l = signal<ListingDto | null>(null);
   passport = signal<PassportPublicDto | null>(null);
@@ -113,9 +114,11 @@ export class UtilizerListingDetail {
   ngOnInit(): void {
     forkJoin({ l: this.api.listing(this.id()), ps: this.api.listingProposals(this.id()) }).subscribe({
       next: ({ l, ps }) => {
+        // Auctions are bid in the live room, not with a proposal form.
+        if (l.mode === 'AUCTION') { this.router.navigate(['/utilizer/auctions', this.id()], { replaceUrl: true }); return; }
         this.l.set(l); this.proposals.set(ps); this.loading.set(false);
         this.q = { quantityTonnes: l.volumeTonnes, requiredPurityPct: l.minPurityPct, transportMode: 'TRUCK' };
-        this.p = { ...this.p, quantityTonnes: l.volumeTonnes, requiredPurityPct: l.minPurityPct, offeredPricePerTonne: l.basePricePerTonne, durationMonths: l.mode === 'AUCTION' ? 1 : 12 };
+        this.p = { ...this.p, quantityTonnes: l.volumeTonnes, requiredPurityPct: l.minPurityPct, offeredPricePerTonne: l.basePricePerTonne, durationMonths: 12 };
         this.api.passportPublic(l.passportId).subscribe({ next: (pp) => this.passport.set(pp), error: () => {} });
       },
       error: (e) => { this.error.set(errMsg(e)); this.loading.set(false); },

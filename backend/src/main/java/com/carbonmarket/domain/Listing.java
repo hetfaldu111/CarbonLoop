@@ -22,6 +22,15 @@ public class Listing {
     private Instant closesAt;
     private String description;
     private Double reservePricePerTonne;
+    // Tender: the delivery policy attached to the agreement (e.g. 20 t per month for 6 months)
+    private Integer deliveryMonths;
+    private Double monthlyTonnes;
+    // Auction: schedule and live ascending state
+    private Double bidIncrement;
+    private Instant scheduledStartAt;
+    private Integer durationMinutes;
+    private Double currentPricePerTonne;
+    private UUID currentLeaderId;
     private Instant createdAt = Instant.now();
 
     public UUID getId() { return id; }
@@ -50,6 +59,26 @@ public class Listing {
     public void setDescription(String description) { this.description = description; }
     public Double getReservePricePerTonne() { return reservePricePerTonne; }
     public void setReservePricePerTonne(Double reservePricePerTonne) { this.reservePricePerTonne = reservePricePerTonne; }
+    public Integer getDeliveryMonths() { return deliveryMonths; }
+    public void setDeliveryMonths(Integer deliveryMonths) { this.deliveryMonths = deliveryMonths; }
+    public Double getMonthlyTonnes() { return monthlyTonnes; }
+    public void setMonthlyTonnes(Double monthlyTonnes) { this.monthlyTonnes = monthlyTonnes; }
+    public Double getBidIncrement() { return bidIncrement; }
+    public void setBidIncrement(Double bidIncrement) { this.bidIncrement = bidIncrement; }
+    public Instant getScheduledStartAt() { return scheduledStartAt; }
+    public void setScheduledStartAt(Instant scheduledStartAt) { this.scheduledStartAt = scheduledStartAt; }
+    public Integer getDurationMinutes() { return durationMinutes; }
+    public void setDurationMinutes(Integer durationMinutes) { this.durationMinutes = durationMinutes; }
+    public Double getCurrentPricePerTonne() { return currentPricePerTonne; }
+    public void setCurrentPricePerTonne(Double currentPricePerTonne) { this.currentPricePerTonne = currentPricePerTonne; }
+    public UUID getCurrentLeaderId() { return currentLeaderId; }
+    public void setCurrentLeaderId(UUID currentLeaderId) { this.currentLeaderId = currentLeaderId; }
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
+
+    /** Price a new bid must pay: the opening price if nobody has bid, otherwise current + increment. */
+    public double nextBidPricePerTonne() {
+        if (currentPricePerTonne == null) return basePricePerTonne;
+        return currentPricePerTonne + (bidIncrement == null ? 0 : bidIncrement);
+    }
 }

@@ -93,6 +93,7 @@ public class AgreementService {
         verifications.save(vr);
 
         trust.onAgreementCreated(a.getEmitterId(), a.getUtilizerId());
+        trust.refreshBadge(a.getEmitterId());
         for (Company lab : companies.findByRoleAndStatus(Role.LAB, CompanyStatus.APPROVED)) {
             notifications.notify(lab.getId(), "VERIFICATION_QUEUED", "Sale awaiting lab approval",
                     "Agreement on " + passport.getPassportCode() + " needs approval before it becomes active.", "VerificationRequest", vr.getId());
@@ -108,6 +109,12 @@ public class AgreementService {
         if (a.getStatus() == AgreementStatus.COMPLETED || a.getStatus() == AgreementStatus.CANCELLED) {
             throw new ConflictException("Agreement is already " + a.getStatus());
         }
+        // Bidding in an auction is a binding commitment: the winner accepted at bid time that they
+        // could not walk away, and that the deposit is forfeited if they try.
+        if (a.getMode() == SaleMode.AUCTION && me.equals(a.getUtilizerId())) {
+            throw new ConflictException("An auction win is binding and cannot be cancelled by the buyer. "
+                    + "You accepted these terms when bidding; any deposit paid is non-refundable.");
+        }
         Co2Passport p = passports.findByIdForUpdate(a.getPassportId()).orElseThrow(() -> new NotFoundException("Passport not found"));
         p.setAllocatedTonnes(Math.max(0, p.getAllocatedTonnes() - a.getVolumeTonnes()));
         passports.save(p);
@@ -119,6 +126,7 @@ public class AgreementService {
         a.setUpdatedAt(Instant.now());
         agreements.save(a);
         if (early) trust.onAgreementCancelledEarly(me);
+        trust.refreshBadge(a.getEmitterId());
 
         UUID other = me.equals(a.getEmitterId()) ? a.getUtilizerId() : a.getEmitterId();
         String penalty = early ? " Cancelled before expiry: the cancelling party's trust score was penalised"
@@ -146,6 +154,7 @@ public class AgreementService {
         a.setUpdatedAt(Instant.now());
         agreements.save(a);
         trust.onAgreementCompleted(a.getEmitterId(), a.getUtilizerId());
+        trust.refreshBadge(a.getEmitterId());
         UUID other = me.equals(a.getEmitterId()) ? a.getUtilizerId() : a.getEmitterId();
         notifications.notify(other, "AGREEMENT_COMPLETED", "Agreement completed",
                 lookup.companyName(me) + " marked the agreement on " + lookup.passportCode(a.getPassportId()) + " as completed. Trust scores updated.",

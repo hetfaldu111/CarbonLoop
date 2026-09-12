@@ -1,6 +1,7 @@
-import { Component, inject, input } from '@angular/core';
+import { Component, inject, input, signal } from '@angular/core';
 import { Router, Routes } from '@angular/router';
 import { AuthService } from './core/auth.service';
+import { ApiService } from './core/api.service';
 import { authGuard, roleGuard } from './core/guards';
 import { PublicLayout, Shell } from './layout/shell';
 import { Landing } from './pages/public/landing';
@@ -22,11 +23,14 @@ import { PassportDetail } from './pages/emitter/passport-detail';
 import { EmitterListings } from './pages/emitter/listings';
 import { ListingForm } from './pages/emitter/listing-form';
 import { EmitterListingDetail } from './pages/emitter/listing-detail';
+import { EmitterAuctions } from './pages/emitter/auctions';
 import { UtilizerDashboard } from './pages/utilizer/dashboard';
 import { Marketplace } from './pages/utilizer/marketplace';
 import { UtilizerListingDetail } from './pages/utilizer/listing-detail';
 import { MyProposals } from './pages/utilizer/proposals';
 import { TrustPage } from './pages/utilizer/trust';
+import { UtilizerAuctions } from './pages/utilizer/auctions';
+import { AuctionRoom } from './pages/shared/auction-room';
 import { TransportOffers } from './pages/transport/offers';
 import { LabQueue } from './pages/lab/queue';
 import { LabRequestDetail } from './pages/lab/request-detail';
@@ -35,17 +39,31 @@ import { RegulatorOverviewPage } from './pages/regulator/overview';
 import { RegulatorCompanies } from './pages/regulator/companies';
 import { RegulatorCompanyDetailPage } from './pages/regulator/company-detail';
 
-/** Resolves role-neutral links (e.g. from notifications) to the role-specific page. */
-@Component({ selector: 'app-role-redirect', template: '' })
+/**
+ * Resolves role-neutral links (e.g. from notifications) to the role-specific page.
+ * Auction listings route to the live auction room rather than the tender detail page,
+ * so a TENDER_PUBLISHED / AUCTION_SCHEDULED notification always lands somewhere useful.
+ */
+@Component({
+  selector: 'app-role-redirect',
+  template: `<p class="muted" style="padding:2rem">{{ note() }}</p>`,
+})
 export class RoleRedirect {
   id = input.required<string>();
   kind = input.required<'listings' | 'negotiations'>();
+  note = signal('Opening…');
   constructor() {
     const auth = inject(AuthService);
+    const api = inject(ApiService);
     const router = inject(Router);
     queueMicrotask(() => {
       const base = auth.hasRole('EMITTER') ? '/emitter' : auth.hasRole('UTILIZER') ? '/utilizer' : null;
-      router.navigateByUrl(base ? `${base}/${this.kind()}/${this.id()}` : auth.homeFor(auth.role()));
+      if (!base) { router.navigateByUrl(auth.homeFor(auth.role())); return; }
+      if (this.kind() !== 'listings') { router.navigateByUrl(`${base}/${this.kind()}/${this.id()}`); return; }
+      api.listing(this.id()).subscribe({
+        next: (l) => router.navigateByUrl(l.mode === 'AUCTION' ? `${base}/auctions/${this.id()}` : `${base}/listings/${this.id()}`),
+        error: () => { this.note.set('That listing is no longer available.'); router.navigateByUrl(`${base}/listings/${this.id()}`); },
+      });
     });
   }
 }
@@ -80,6 +98,8 @@ export const routes: Routes = [
         { path: 'listings', component: EmitterListings, title: 'My listings' },
         { path: 'listings/new', component: ListingForm, title: 'New listing' },
         { path: 'listings/:id', component: EmitterListingDetail, title: 'Listing' },
+        { path: 'auctions', component: EmitterAuctions, title: 'My auctions' },
+        { path: 'auctions/:id', component: AuctionRoom, title: 'Auction' },
         { path: 'agreements', component: AgreementsList, title: 'Agreements' },
         { path: 'negotiations', component: NegotiationsList, title: 'Negotiations' },
         { path: 'negotiations/new', component: NegotiationNew, title: 'New negotiation' },
@@ -91,6 +111,8 @@ export const routes: Routes = [
         { path: '', component: UtilizerDashboard, title: 'Utilizer dashboard' },
         { path: 'marketplace', component: Marketplace, title: 'Marketplace' },
         { path: 'listings/:id', component: UtilizerListingDetail, title: 'Listing' },
+        { path: 'auctions', component: UtilizerAuctions, title: 'Auctions' },
+        { path: 'auctions/:id', component: AuctionRoom, title: 'Auction room' },
         { path: 'proposals', component: MyProposals, title: 'My proposals' },
         { path: 'agreements', component: AgreementsList, title: 'Agreements' },
         { path: 'negotiations', component: NegotiationsList, title: 'Negotiations' },

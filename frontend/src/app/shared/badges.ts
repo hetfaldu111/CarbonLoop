@@ -5,14 +5,23 @@ import { LabelPipe } from './pipes';
 @Component({
   selector: 'app-tier-badge',
   imports: [LabelPipe],
-  template: `@if (tier()) {<span class="badge tier tier-{{ tier()!.toLowerCase() }}" [title]="'Trust tier: ' + (tier() | label)">◆ {{ tier() | label }}</span>}`,
+  template: `@if (tier()) {<span class="badge tier tier-{{ tier()!.toLowerCase() }}" [title]="hint()">◆ {{ tier() | label }}</span>}`,
 })
 export class TierBadge {
   tier = input<Tier | null | undefined>();
+  /** What the badge is earned on: emitters by volume sold, utilizers by completed agreements. */
+  basis = input<string | null | undefined>();
+  hint = computed(() => {
+    const t = this.tier();
+    const label = t ? t.charAt(0) + t.slice(1).toLowerCase() : '';
+    const b = this.basis();
+    return b ? `${label} badge, earned on ${b}` : `Trust tier: ${label}`;
+  });
 }
 
 const TONE: Record<string, string> = {
   OPEN: 'info', AWARDED: 'success', CLOSED: 'neutral', CANCELLED: 'danger',
+  SCHEDULED: 'warn', LIVE: 'danger', ENDED: 'neutral',
   SUBMITTED: 'info', REJECTED: 'danger', WITHDRAWN: 'neutral',
   PENDING_VERIFICATION: 'warn', ACTIVE: 'success', COMPLETED: 'neutral',
   ACCEPTED: 'success', COUNTERED: 'warn', PENDING: 'warn',

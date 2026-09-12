@@ -2,7 +2,8 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
-  AgreementDto, AllocationDto, AuditEventDto, CompanyDto, ContractOfferDto, ContractOfferInput, CostEstimateDto,
+  AgreementDto, AllocationDto, AuctionFilter, AuctionStateDto, AuditEventDto, AwardSuggestionDto, CompanyDto,
+  ContractOfferDto, ContractOfferInput, CostEstimateDto,
   CostEstimateRequest, CreateListingRequest, CreateNegotiationRequest, CreateProposalRequest, CreateShipmentRequest,
   DecideRequest, DeliverRequest, DirectoryEntry, ForecastDto, ImpactDto, ListingDto, LoadRequest, NegotiationDto,
   NotificationDto, Page, PassportDto, PassportPublicDto, ProposalDto, PublicListingDto, RatesDto, RegulatorCompanyDetail,
@@ -59,7 +60,19 @@ export class ApiService {
   cancelListing(id: string): Observable<ListingDto> { return this.http.post<ListingDto>(`/api/listings/${id}/cancel`, {}); }
   submitProposal(listingId: string, body: CreateProposalRequest): Observable<ProposalDto> { return this.http.post<ProposalDto>(`/api/listings/${listingId}/proposals`, body); }
   listingProposals(listingId: string): Observable<ProposalDto[]> { return this.http.get<ProposalDto[]>(`/api/listings/${listingId}/proposals`); }
-  award(listingId: string, proposalId: string): Observable<AgreementDto> { return this.http.post<AgreementDto>(`/api/listings/${listingId}/award`, { proposalId }); }
+  /** v2: multi-award. Accepts one or more proposals; returns one agreement per winner. */
+  award(listingId: string, proposalIds: string[]): Observable<AgreementDto[]> {
+    return this.http.post<AgreementDto[]>(`/api/listings/${listingId}/award`, { proposalIds });
+  }
+  awardSuggestion(listingId: string): Observable<AwardSuggestionDto> {
+    return this.http.get<AwardSuggestionDto>(`/api/listings/${listingId}/award-suggestion`);
+  }
+
+  // Auctions (v2)
+  auctionState(listingId: string): Observable<AuctionStateDto> { return this.http.get<AuctionStateDto>(`/api/listings/${listingId}/auction`); }
+  placeBid(listingId: string): Observable<AuctionStateDto> { return this.http.post<AuctionStateDto>(`/api/listings/${listingId}/bids`, { acceptBindingTerms: true }); }
+  auctions(filter: AuctionFilter): Observable<AuctionStateDto[]> { return this.http.get<AuctionStateDto[]>('/api/auctions', { params: this.params({ filter }) }); }
+  myAuctions(): Observable<AuctionStateDto[]> { return this.http.get<AuctionStateDto[]>('/api/auctions/mine'); }
 
   // Proposals
   myProposals(): Observable<ProposalDto[]> { return this.http.get<ProposalDto[]>('/api/proposals/mine'); }

@@ -15,7 +15,7 @@ import { errMsg } from '../../shared/utils';
     @if (loading()) {<app-loading />}
     @if (t(); as t) {
       <div class="grid grid-4 mb">
-        <div class="stat"><div class="label">Tier</div><div class="value" style="font-size:1.3rem"><app-tier-badge [tier]="t.tier" /></div><div class="sub">{{ t.companyName }}</div></div>
+        <div class="stat"><div class="label">Tier</div><div class="value" style="font-size:1.3rem"><app-tier-badge [tier]="t.tier" [basis]="t.badgeBasis" /></div><div class="sub">earned on {{ t.badgeBasis || 'completed agreements' }}@if (t.tonnesSold) {, {{ t.tonnesSold }} t sold}</div></div>
         <div class="stat"><div class="label">Hidden score</div><div class="value">{{ t.hiddenScore | number:'1.0-1' }}</div><div class="sub">out of 100</div></div>
         <div class="stat"><div class="label">Completion rate</div><div class="value">{{ t.completionRate | percent:'1.0-0' }}</div><div class="sub">{{ t.completedAgreements }} of {{ t.totalAgreements }} agreements</div></div>
         <div class="stat"><div class="label">Cancellations before expiry</div><div class="value" [class.neg]="t.cancellationsBeforeExpiry > 0">{{ t.cancellationsBeforeExpiry }}</div><div class="sub">rate {{ t.cancellationRate | percent:'1.0-1' }}</div></div>

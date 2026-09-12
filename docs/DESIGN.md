@@ -4,6 +4,15 @@ Constraint: NO AI / ML / blockchain. All matching, scoring, ranking = determinis
 Stack: Angular 21 (standalone, signals) + Spring Boot 3.5 (Java 21, no Lombok) + PostgreSQL 16 (JSONB columns; JDBC url uses `?stringtype=unspecified` so JSON text binds to jsonb), H2 profile (`h2`) for no-docker dev where json columns are `text`.
 Currency: INR (₹). Units: tonnes (t), km, %.
 
+> **Superseded for Tender and Auction.** The trading flows were rebuilt in
+> [`DESIGN-V2-TRADING-FLOWS.md`](DESIGN-V2-TRADING-FLOWS.md). Tenders now support a profit-optimal
+> **multi-award** (exact knapsack over proposal revenue, badge breaks ties, unawarded volume
+> returns to free stock), and auctions are **scheduled live ascending auctions** with a fixed
+> increment per bid, pseudonymous rival bidders, anti-sniping and a binding last-bid-wins close.
+> Read that document for the Tender and Auction contract. The Negotiation flow, the CO2 Passport,
+> the cost stack, shipments, verification, the regulator view and the audit chain are unchanged
+> and still specified below.
+
 ## Roles
 ADMIN, EMITTER, UTILIZER, TRANSPORT, LAB, REGULATOR. One user per company. Company status: PENDING → APPROVED | REJECTED. Only APPROVED companies can log in (login returns 403 `{"status":403,"message":"Company approval pending"}`; REJECTED → 403 "Company registration rejected").
 
@@ -133,7 +142,7 @@ Listings
 - GET /listings/mine (EMITTER) ; GET /listings/{id} ; POST /listings/{id}/cancel (EMITTER, only OPEN)
 - POST /listings/{id}/proposals {quantityTonnes, requiredPurityPct, durationMonths, deliveryRequirement, offeredPricePerTonne, acceptsEscrow, otherRequirements} (UTILIZER) → ProposalDto{id, listingId, listingMode, utilizerId, utilizerName, utilizerTier, quantityTonnes, requiredPurityPct, durationMonths, deliveryRequirement, offeredPricePerTonne, acceptsEscrow, otherRequirements, status, score, scoreBreakdown, rank, createdAt}. One SUBMITTED proposal per utilizer per listing (409 otherwise).
 - GET /listings/{id}/proposals → emitter/admin/regulator: ranked list + `recommendation` string on each response element `rank`=1..n; utilizer: own only
-- POST /listings/{id}/award {proposalId} (EMITTER) → AgreementDto (PENDING_VERIFICATION; creates SALE_APPROVAL verification request priority 4; other proposals REJECTED; listing AWARDED; remainder volume released)
+- POST /listings/{id}/award {proposalIds:[...]} (EMITTER) → AgreementDto[] — one agreement per winner. See DESIGN-V2-TRADING-FLOWS.md §1.3. Also GET /listings/{id}/award-suggestion for the profit-optimal combination.
 Proposals (UTILIZER)
 - GET /proposals/mine ; POST /proposals/{id}/withdraw
 Costs (any authenticated; utilizer coords from caller company, or `destinationLatitude/Longitude` override)

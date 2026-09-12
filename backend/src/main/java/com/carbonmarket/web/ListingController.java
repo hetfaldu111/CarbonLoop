@@ -56,9 +56,17 @@ public class ListingController {
     @GetMapping("/listings/{id}/proposals")
     public List<ProposalDto> proposals(@PathVariable UUID id) { return service.proposalsFor(id); }
 
+    /** The profit-optimal combination, with alternatives and per-proposal reliability scores. */
+    @GetMapping("/listings/{id}/award-suggestion")
+    @PreAuthorize("hasAnyRole('EMITTER','ADMIN','REGULATOR')")
+    public AwardSuggestionDto awardSuggestion(@PathVariable UUID id) { return service.awardSuggestion(id); }
+
+    /** Accepts one or more proposals; unawarded volume returns to the free stock. */
     @PostMapping("/listings/{id}/award")
     @PreAuthorize("hasRole('EMITTER')")
-    public AgreementDto award(@PathVariable UUID id, @Valid @RequestBody AwardRequest r) { return service.award(id, r.proposalId()); }
+    public List<AgreementDto> award(@PathVariable UUID id, @Valid @RequestBody AwardRequest r) {
+        return service.award(id, r.proposalIds());
+    }
 
     @GetMapping("/proposals/mine")
     @PreAuthorize("hasRole('UTILIZER')")

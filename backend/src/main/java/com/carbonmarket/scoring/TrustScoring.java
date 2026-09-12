@@ -18,6 +18,18 @@ public final class TrustScoring {
         return Math.round(clamp(score) * 100.0) / 100.0;
     }
 
+    /**
+     * Emitter badge. Emitters are not buyers, so completion rate says little about them; what a
+     * buyer wants to know is how much CO2 they have actually shifted. Banded on cumulative tonnes
+     * across ACTIVE and COMPLETED agreements.
+     */
+    public static Tier tierForTonnesSold(double tonnesSold) {
+        if (tonnesSold >= 5000) return Tier.DIAMOND;
+        if (tonnesSold >= 2000) return Tier.GOLD;
+        if (tonnesSold >= 500) return Tier.SILVER;
+        return Tier.BRONZE;
+    }
+
     public static Tier tierFor(double score) {
         if (score >= 90) return Tier.DIAMOND;
         if (score >= 70) return Tier.GOLD;

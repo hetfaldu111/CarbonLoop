@@ -25,8 +25,11 @@ import { errMsg } from '../../shared/utils';
       <div class="grid grid-auto">
         @for (l of rows(); track l.id) {
           <div class="card listing-card">
-            <div class="row between"><app-status-badge [value]="l.mode" /><span class="muted small">closes {{ l.closesAt | date:'mediumDate' }}</span></div>
-            <div class="price">{{ l.basePricePerTonne | money }} <span class="muted small">/ t {{ l.mode === 'AUCTION' ? '(start)' : '' }}</span></div>
+            <div class="row between">
+              <span class="row" style="gap:.35rem"><app-status-badge [value]="l.mode" />@if (l.mode === 'AUCTION') {<app-status-badge [value]="l.status" />}</span>
+              <span class="muted small">@if (l.mode === 'AUCTION' && l.scheduledStartAt) {opens {{ l.scheduledStartAt | date:'short' }}} @else {closes {{ l.closesAt | date:'mediumDate' }}}</span>
+            </div>
+            <div class="price">{{ (l.mode === 'AUCTION' ? (l.currentPricePerTonne ?? l.basePricePerTonne) : l.basePricePerTonne) | money }} <span class="muted small">/ t @if (l.mode === 'AUCTION') {{{ l.bidCount ? 'current · ' + l.bidCount + ' bids' : 'opening' }}}</span></div>
             <div class="meta">
               <span><strong>{{ l.volumeTonnes | tonnes }}</strong> listed</span>
               <span>{{ l.concentrationPct | number:'1.1-1' }}% CO₂ (min {{ l.minPurityPct }}%)</span>
@@ -40,7 +43,11 @@ import { errMsg } from '../../shared/utils';
               <span class="small">{{ l.emitterName || 'Emitter hidden' }} <app-tier-badge [tier]="l.emitterTier" /></span>
               <span class="muted small">{{ l.proposalCount }} proposal{{ l.proposalCount === 1 ? '' : 's' }}</span>
             </div>
-            <a class="btn btn-primary btn-sm" [routerLink]="['/utilizer/listings', l.id]">Estimate cost &amp; respond</a>
+            @if (l.mode === 'AUCTION') {
+              <a class="btn btn-primary btn-sm" [routerLink]="['/utilizer/auctions', l.id]">{{ l.status === 'LIVE' ? 'Join the live auction' : 'View the auction' }}</a>
+            } @else {
+              <a class="btn btn-primary btn-sm" [routerLink]="['/utilizer/listings', l.id]">Estimate cost &amp; respond</a>
+            }
           </div>
         }
       </div>

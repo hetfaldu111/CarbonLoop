@@ -2,7 +2,8 @@ export type Role = 'ADMIN' | 'EMITTER' | 'UTILIZER' | 'TRANSPORT' | 'LAB' | 'REG
 export type CompanyStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 export type Tier = 'BRONZE' | 'SILVER' | 'GOLD' | 'DIAMOND';
 export type ListingMode = 'TENDER' | 'AUCTION' | 'CONTRACT';
-export type ListingStatus = 'OPEN' | 'AWARDED' | 'CLOSED' | 'CANCELLED';
+export type ListingStatus = 'OPEN' | 'SCHEDULED' | 'LIVE' | 'ENDED' | 'AWARDED' | 'CLOSED' | 'CANCELLED';
+export type AuctionFilter = 'live' | 'upcoming' | 'ended';
 export type ProposalStatus = 'SUBMITTED' | 'AWARDED' | 'REJECTED' | 'WITHDRAWN';
 export type AgreementStatus = 'PENDING_VERIFICATION' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
 export type NegotiationStatus = 'OPEN' | 'ACCEPTED' | 'REJECTED' | 'CANCELLED';
@@ -50,6 +51,7 @@ export interface DirectoryEntry { id: string; name: string; city: string; state:
 export interface TrustDto {
   companyId: string; companyName: string; tier: Tier; hiddenScore: number; totalAgreements: number;
   completedAgreements: number; cancellationsBeforeExpiry: number; cancellationRate: number; completionRate: number; formula: string;
+  tonnesSold?: number; badgeBasis?: string;
 }
 
 export interface ImpactDto {
@@ -94,10 +96,17 @@ export interface ListingDto {
   deliveryWindowStart: string; deliveryWindowEnd: string; closesAt: string; description: string;
   reservePricePerTonne?: number | null; emitterId?: string | null; emitterName?: string | null; emitterTier?: Tier | null;
   passportTotalVolume?: number | null; proposalCount: number; createdAt: string;
+  // v2 — tender delivery schedule
+  deliveryMonths?: number | null; monthlyTonnes?: number | null;
+  // v2 — auction scheduling
+  bidIncrement?: number | null; scheduledStartAt?: string | null; durationMinutes?: number | null;
+  currentPricePerTonne?: number | null; bidCount?: number | null;
 }
 export interface CreateListingRequest {
   passportId: string; mode: ListingMode; volumeTonnes: number; basePricePerTonne: number; minPurityPct: number;
-  deliveryWindowStart: string; deliveryWindowEnd: string; closesAt: string; description: string; reservePricePerTonne?: number | null;
+  deliveryWindowStart: string; deliveryWindowEnd: string; closesAt?: string | null; description: string;
+  deliveryMonths?: number | null; monthlyTonnes?: number | null;
+  bidIncrement?: number | null; scheduledStartAt?: string | null; durationMinutes?: number | null;
 }
 
 export interface ScoreComponent {
@@ -113,6 +122,39 @@ export interface ProposalDto {
 export interface CreateProposalRequest {
   quantityTonnes: number; requiredPurityPct: number; durationMonths: number; deliveryRequirement: string;
   offeredPricePerTonne: number; acceptsEscrow: boolean; otherRequirements: string;
+}
+
+/** v2 — profit-optimal multi-award. Exact knapsack on the server; nothing predictive. */
+export interface AwardOption {
+  label?: string; proposalIds: string[]; totalRevenue: number; totalTonnes: number;
+  leftoverTonnes: number; utilizers?: string[];
+}
+export interface ProposalRevenueRow {
+  proposalId: string; utilizerId?: string; utilizerName: string; tier: Tier; quantityTonnes: number;
+  offeredPricePerTonne: number; revenue: number; inRecommendation: boolean; score: number; scoreBreakdown: ScoreBreakdown;
+}
+export interface AwardSuggestionDto {
+  listingId: string; capacityTonnes: number; exact: boolean;
+  recommended: AwardOption; alternatives: AwardOption[]; explanation: string; perProposal: ProposalRevenueRow[];
+}
+
+/** v2 — live ascending auction. */
+export interface AuctionBidder { companyId?: string | null; displayName: string; tier: Tier; isYou: boolean; }
+export interface AuctionBidDto {
+  displayName: string; tier: Tier; amountPerTonne: number; totalAmount: number;
+  placedAt: string; isYou: boolean; companyId?: string | null;
+}
+export interface AuctionStateDto {
+  listingId: string; passportId: string; passportCode: string;
+  status: 'SCHEDULED' | 'LIVE' | 'ENDED' | 'AWARDED' | 'CLOSED' | 'CANCELLED';
+  scheduledStartAt: string; closesAt: string; serverTime: string; secondsRemaining: number;
+  basePricePerTonne: number; bidIncrement: number; currentPricePerTonne?: number | null; nextBidPricePerTonne: number;
+  volumeTonnes: number; currentTotal?: number | null;
+  leader?: AuctionBidder | null; bidCount: number; youAreLeading: boolean;
+  canBid: boolean; blockedReason?: string | null; bindingTerms: string;
+  emitterId?: string | null; emitterName?: string | null; emitterTier?: Tier | null;
+  city: string; state: string; concentrationPct: number; agreementId?: string | null;
+  bids: AuctionBidDto[];
 }
 
 export interface CostLayer { name: string; amount: number; perTonne: number; detail: string; }

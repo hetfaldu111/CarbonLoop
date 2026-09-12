@@ -13,6 +13,8 @@ public class TrustProfile {
     private int completedAgreements;
     private int cancellationsBeforeExpiry;
     private double hiddenScore = 50;
+    /** Emitters are badged on cumulative tonnes sold (ACTIVE + COMPLETED agreements). */
+    private double tonnesSold;
     @Enumerated(EnumType.STRING) private Tier tier = Tier.SILVER;
     private Instant updatedAt = Instant.now();
 
@@ -26,6 +28,8 @@ public class TrustProfile {
     public void setCancellationsBeforeExpiry(int cancellationsBeforeExpiry) { this.cancellationsBeforeExpiry = cancellationsBeforeExpiry; }
     public double getHiddenScore() { return hiddenScore; }
     public void setHiddenScore(double hiddenScore) { this.hiddenScore = hiddenScore; }
+    public double getTonnesSold() { return tonnesSold; }
+    public void setTonnesSold(double tonnesSold) { this.tonnesSold = tonnesSold; }
     public Tier getTier() { return tier; }
     public void setTier(Tier tier) { this.tier = tier; }
     public Instant getUpdatedAt() { return updatedAt; }
