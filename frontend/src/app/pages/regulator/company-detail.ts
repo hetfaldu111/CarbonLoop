@@ -1,5 +1,5 @@
 import { Component, inject, input, signal } from '@angular/core';
-import { DatePipe, DecimalPipe, PercentPipe } from '@angular/common';
+import { DatePipe, PercentPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api.service';
 import { RegulatorCompanyDetail } from '../../core/models';
@@ -10,7 +10,7 @@ import { errMsg } from '../../shared/utils';
 
 @Component({
   selector: 'app-regulator-company-detail',
-  imports: [DatePipe, DecimalPipe, PercentPipe, RouterLink, StatusBadge, TierBadge, LabelPipe, MoneyPipe, TonnesPipe, Alert, Loading, PageHeader],
+  imports: [DatePipe, PercentPipe, RouterLink, StatusBadge, TierBadge, LabelPipe, MoneyPipe, TonnesPipe, Alert, Loading, PageHeader],
   template: `
     @if (loading()) {<app-loading />}
     <app-alert [message]="error()" />

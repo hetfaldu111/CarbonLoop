@@ -1,5 +1,4 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { ApiService } from '../../core/api.service';
@@ -11,7 +10,7 @@ import { errMsg } from '../../shared/utils';
 
 @Component({
   selector: 'app-utilizer-dashboard',
-  imports: [DecimalPipe, RouterLink, StatusBadge, TierBadge, MoneyPipe, TonnesPipe, Alert, Loading, PageHeader],
+  imports: [RouterLink, StatusBadge, TierBadge, MoneyPipe, TonnesPipe, Alert, Loading, PageHeader],
   template: `
     <app-page-header title="Utilizer dashboard" subtitle="Discover verified CO₂ supply, estimate full delivered cost, and respond to tenders, auctions or contracts.">
       <a class="btn btn-primary" routerLink="/utilizer/marketplace">Browse marketplace</a>

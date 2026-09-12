@@ -1,5 +1,4 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api.service';
@@ -11,7 +10,7 @@ import { errMsg } from '../../shared/utils';
 
 @Component({
   selector: 'app-regulator-companies',
-  imports: [DecimalPipe, FormsModule, RouterLink, StatusBadge, TierBadge, LabelPipe, Alert, EmptyState, Loading, PageHeader],
+  imports: [FormsModule, RouterLink, StatusBadge, TierBadge, LabelPipe, Alert, EmptyState, Loading, PageHeader],
   template: `
     <app-page-header title="Companies — compliance & incentives" subtitle="Red = compliance flag, green = qualifies for a known government scheme. All flags are rule-based.">
       <select [ngModel]="role()" (ngModelChange)="role.set($event)" style="width:auto"><option value="">All roles</option><option value="EMITTER">Emitters</option><option value="UTILIZER">Utilizers</option><option value="TRANSPORT">Transport</option><option value="LAB">Labs</option></select>

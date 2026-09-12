@@ -127,12 +127,6 @@ export class Shell {
             <span class="cl-logo-text">Carbon<span>Loop</span></span>
           </a>
           <div class="cl-nav-links">
-            @if (onLanding()) {
-              <a class="lnk sec" href="#exchange">Exchange</a>
-              <a class="lnk sec" href="#mechanisms">Mechanisms</a>
-              <a class="lnk sec" href="#verify">Verify</a>
-              <a class="lnk sec" href="#about">About</a>
-            }
             @if (auth.isLoggedIn()) {
               <a class="cl-pill" [routerLink]="auth.homeFor(auth.role())">Go to dashboard</a>
             } @else {
@@ -150,14 +144,7 @@ export class PublicLayout {
   private router = inject(Router);
   /** The nav is transparent over the hero and frosts once the page scrolls. */
   scrolled = signal(false);
-  /**
-   * Exchange / Mechanisms / Verify / About are anchors into the landing page's own sections,
-   * so they are dead links anywhere else. Only show them on the landing page itself.
-   */
-  private url = signal(this.router.url);
-  onLanding = computed(() => { const u = this.url().split('?')[0].split('#')[0]; return u === '/' || u === ''; });
   constructor() {
     window.addEventListener('scroll', () => this.scrolled.set(window.scrollY > 20), { passive: true });
-    this.router.events.subscribe(() => this.url.set(this.router.url));
   }
 }
