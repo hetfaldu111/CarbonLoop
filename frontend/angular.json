@@ -32,7 +32,8 @@
             ],
             "styles": [
               "src/styles.scss",
-              "src/landing.scss"
+              "src/landing.scss",
+              "src/emitter.scss"
             ]
           },
           "configurations": {
