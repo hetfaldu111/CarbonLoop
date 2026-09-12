@@ -6,12 +6,12 @@ import { ApiService } from '../../core/api.service';
 import { TransportOfferDto } from '../../core/models';
 import { StatusBadge } from '../../shared/badges';
 import { LabelPipe, MoneyPipe, TonnesPipe } from '../../shared/pipes';
-import { Alert, EmptyState, Loading, PageHeader } from '../../shared/widgets';
-import { errMsg } from '../../shared/utils';
+import { Alert, EmptyState, FieldError, Loading, PageHeader } from '../../shared/widgets';
+import { Check, FieldErrors, errMsg } from '../../shared/utils';
 
 @Component({
   selector: 'app-transport-offers',
-  imports: [DatePipe, DecimalPipe, FormsModule, RouterLink, StatusBadge, LabelPipe, MoneyPipe, TonnesPipe, Alert, EmptyState, Loading, PageHeader],
+  imports: [DatePipe, DecimalPipe, FormsModule, RouterLink, StatusBadge, LabelPipe, MoneyPipe, TonnesPipe, Alert, EmptyState, FieldError, Loading, PageHeader],
   template: `
     <app-page-header title="Shipment offers" subtitle="You are notified for shipments loading within ~100 km of your base. First provider to accept wins the job.">
       <button class="btn btn-sm" (click)="load()">Refresh</button>
@@ -31,8 +31,12 @@ import { errMsg } from '../../shared/utils';
                 <div class="muted small">{{ o.shipment.emitterName }} → {{ o.shipment.utilizerName }} · route {{ o.shipment.distanceKm | number:'1.0-0' }} km · you are {{ o.distanceFromOriginKm | number:'1.0-0' }} km from origin · notified {{ o.createdAt | date:'medium' }}</div>
               </div>
               <div class="row">
-                <input type="number" [(ngModel)]="quotes[o.id]" placeholder="Quoted price ₹" style="width:160px" />
-                <button class="btn btn-primary btn-sm" (click)="accept(o)" [disabled]="busy() || !quotes[o.id]">Accept job</button>
+                <span class="field inline-field" [class.invalid]="fe()[o.id]">
+                  <input type="number" [(ngModel)]="quotes[o.id]" placeholder="Quoted price ₹" required
+                         [attr.aria-invalid]="fe()[o.id] ? 'true' : null" style="width:160px" />
+                  <app-field-error [msg]="fe()[o.id]" />
+                </span>
+                <button class="btn btn-primary btn-sm" (click)="accept(o)" [disabled]="busy()">Accept job</button>
                 <button class="btn btn-sm" (click)="reject(o)" [disabled]="busy()">Reject</button>
               </div>
             </div>
@@ -68,7 +72,14 @@ export class TransportOffers {
       error: (e) => { this.error.set(errMsg(e)); this.loading.set(false); },
     });
   }
+  /** Keyed by offer id, since several offers are listed at once. */
+  fe = signal<FieldErrors>({});
+
   accept(o: TransportOfferDto): void {
+    const c = new Check();
+    c.num(o.id, this.quotes[o.id], 'Quoted price', { gt: 0 });
+    if (!c.ok) { this.fe.set(c.errors); return; }
+    this.fe.set({});
     this.busy.set(true); this.error.set(null);
     this.api.acceptTransportOffer(o.id, +(this.quotes[o.id] ?? 0)).subscribe({ next: () => { this.busy.set(false); this.ok.set('Job accepted. Record loading from the shipment page once sealed.'); this.load(); }, error: (e) => { this.error.set(errMsg(e)); this.busy.set(false); } });
   }

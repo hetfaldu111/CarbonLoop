@@ -391,7 +391,9 @@
 }
 
 /* ===== Registration wizard: step rail, form, fact panel ===== */
-.reg-page { min-height: 100vh; background: var(--bg); padding: calc(68px + 2.5rem) 1.5rem 4rem; }
+.reg-page { min-height: 100vh; background: var(--bg); padding: calc(68px + 2.5rem) 1.5rem 4rem; position: relative; overflow: hidden; }
+/* The wizard sits above the drifting doodles, which never take the pointer. */
+.reg-page > .reg-shell, .reg-page > .reg-done { position: relative; z-index: 1; }
 .reg-shell {
   display: grid;
   grid-template-columns: 236px minmax(0, 1fr) 300px;
@@ -528,3 +530,59 @@
   .role-opt { grid-template-columns: 56px minmax(0, 1fr) 24px; gap: 0.75rem; padding: 0.9rem; }
   .role-art svg { width: 52px; height: 40px; }
 }
+
+/* ===== Form validation: required markers and red errors ===== */
+
+/* The register wizard already used .alert-danger; it had no definition, so its error
+   summary rendered without any red at all. */
+.alert-danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 32%, transparent);
+}
+.alert-danger strong { color: var(--danger); }
+
+.required-star { color: var(--danger); font-weight: 700; margin-left: 0.15rem; }
+
+.field.invalid input,
+.field.invalid select,
+.field.invalid textarea,
+.lf.invalid input {
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 4%, transparent);
+}
+.field.invalid input:focus,
+.field.invalid select:focus,
+.field.invalid textarea:focus,
+.lf.invalid input:focus {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 20%, transparent);
+}
+.lf.invalid label { color: var(--danger); }
+
+.field-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  margin-top: 0.15rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--danger);
+}
+.field-error .fe-ico {
+  flex: none;
+  width: 13px;
+  height: 13px;
+  margin-top: 0.1rem;
+  border-radius: 50%;
+  background: var(--danger);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 800;
+  line-height: 13px;
+  text-align: center;
+}
+
+/* A field used inline inside a toolbar row rather than a form grid. */
+.inline-field { display: inline-flex; flex-direction: column; gap: 0.2rem; vertical-align: top; }

@@ -8,12 +8,12 @@ import { AuthService } from '../../core/auth.service';
 import { CostEstimateDto, IMPURITIES, ListingDto, PassportPublicDto, ProposalDto, TransportMode } from '../../core/models';
 import { StatusBadge, TierBadge } from '../../shared/badges';
 import { LabelPipe, MoneyPipe, TonnesPipe } from '../../shared/pipes';
-import { Alert, CostStackView, Loading, PageHeader } from '../../shared/widgets';
-import { errMsg } from '../../shared/utils';
+import { Alert, CostStackView, FieldError, Loading, PageHeader } from '../../shared/widgets';
+import { Check, FieldErrors, errMsg, scrollToFirstInvalid } from '../../shared/utils';
 
 @Component({
   selector: 'app-utilizer-listing-detail',
-  imports: [DatePipe, DecimalPipe, FormsModule, RouterLink, StatusBadge, TierBadge, LabelPipe, MoneyPipe, TonnesPipe, Alert, CostStackView, Loading, PageHeader],
+  imports: [DatePipe, DecimalPipe, FormsModule, RouterLink, StatusBadge, TierBadge, LabelPipe, MoneyPipe, TonnesPipe, Alert, CostStackView, FieldError, Loading, PageHeader],
   template: `
     @if (loading()) {<app-loading />}
     <app-alert [message]="error()" />
@@ -33,8 +33,8 @@ import { errMsg } from '../../shared/utils';
         <div class="card">
           <h3>Cost estimator <span class="muted small">— every layer shown separately</span></h3>
           <div class="form-row">
-            <div class="field"><label>Quantity (t)</label><input type="number" step="0.1" [(ngModel)]="q.quantityTonnes" /></div>
-            <div class="field"><label>Purity you need (%)</label><input type="number" step="0.1" [(ngModel)]="q.requiredPurityPct" /><span class="hint">Above {{ l.concentrationPct }}% adds purification cost.</span></div>
+            <div class="field" [class.invalid]="fe()['q_qty']"><label>Quantity (t) <span class="required-star">*</span></label><input type="number" step="0.1" [(ngModel)]="q.quantityTonnes" required [attr.aria-invalid]="fe()['q_qty'] ? 'true' : null" /><app-field-error [msg]="fe()['q_qty']" /></div>
+            <div class="field" [class.invalid]="fe()['q_purity']"><label>Purity you need (%) <span class="required-star">*</span></label><input type="number" step="0.1" [(ngModel)]="q.requiredPurityPct" required [attr.aria-invalid]="fe()['q_purity'] ? 'true' : null" /><span class="hint">Above {{ l.concentrationPct }}% adds purification cost.</span><app-field-error [msg]="fe()['q_purity']" /></div>
             <div class="field"><label>Transport mode</label><select [(ngModel)]="q.transportMode"><option value="TRUCK">Truck (cryogenic)</option><option value="RAIL">Rail</option><option value="PIPELINE" [disabled]="!l.pipelineConnected">Pipeline{{ l.pipelineConnected ? '' : ' (site not connected)' }}</option></select></div>
           </div>
           <details>
@@ -57,17 +57,17 @@ import { errMsg } from '../../shared/utils';
             <a class="btn btn-primary" routerLink="/utilizer/negotiations/new">Direct-connect &amp; propose contract</a>
           } @else {
             <h3>{{ l.mode === 'AUCTION' ? 'Place a bid' : 'Submit a tender proposal' }}</h3>
-            <p class="muted small">@if (l.mode === 'TENDER') {Ranked by trust tier, reliability, cancellation rate, price, volume fit, commitment, escrow and distance. Trust outweighs price.} @else {Highest bid above reserve wins; the emitter still sees your trust context.}</p>
+            <p class="muted small">@if (l.mode === 'TENDER') {Proposals are ranked by published, deterministic rules and the emitter makes the final call.} @else {Highest bid above reserve wins; the emitter still sees your trading history.}</p>
             <div class="form-row">
-              <div class="field"><label>Quantity (t)</label><input type="number" step="0.1" [(ngModel)]="p.quantityTonnes" /><span class="hint">Closer to {{ l.volumeTonnes | tonnes }} = better volume-fit score.</span></div>
-              <div class="field"><label>Your price (₹ / t)</label><input type="number" [(ngModel)]="p.offeredPricePerTonne" />@if (l.reservePricePerTonne) {<span class="hint">Must be ≥ reserve {{ l.reservePricePerTonne | money }}</span>}</div>
+              <div class="field" [class.invalid]="fe()['p_qty']"><label>Quantity (t) <span class="required-star">*</span></label><input type="number" step="0.1" [(ngModel)]="p.quantityTonnes" required [attr.aria-invalid]="fe()['p_qty'] ? 'true' : null" /><span class="hint">Up to {{ l.volumeTonnes | tonnes }} is on offer.</span><app-field-error [msg]="fe()['p_qty']" /></div>
+              <div class="field" [class.invalid]="fe()['p_price']"><label>Your price (₹ / t) <span class="required-star">*</span></label><input type="number" [(ngModel)]="p.offeredPricePerTonne" required [attr.aria-invalid]="fe()['p_price'] ? 'true' : null" /><span class="hint">At or above the base price of {{ l.basePricePerTonne | money }}.</span><app-field-error [msg]="fe()['p_price']" /></div>
               @if (l.mode === 'TENDER') {
-                <div class="field"><label>Required purity (%)</label><input type="number" step="0.1" [(ngModel)]="p.requiredPurityPct" /></div>
-                <div class="field"><label>Duration / commitment (months)</label><input type="number" [(ngModel)]="p.durationMonths" /><span class="hint">12+ months = full commitment score.</span></div>
+                <div class="field" [class.invalid]="fe()['p_purity']"><label>Required purity (%) <span class="required-star">*</span></label><input type="number" step="0.1" [(ngModel)]="p.requiredPurityPct" required [attr.aria-invalid]="fe()['p_purity'] ? 'true' : null" /><app-field-error [msg]="fe()['p_purity']" /></div>
+                <div class="field" [class.invalid]="fe()['p_duration']"><label>Duration / commitment (months) <span class="required-star">*</span></label><input type="number" [(ngModel)]="p.durationMonths" required [attr.aria-invalid]="fe()['p_duration'] ? 'true' : null" /><app-field-error [msg]="fe()['p_duration']" /></div>
               }
             </div>
             @if (l.mode === 'TENDER') {
-              <div class="field"><label>Delivery requirement</label><input [(ngModel)]="p.deliveryRequirement" placeholder="e.g. weekly truck deliveries, liquefied at 18 bar" /></div>
+              <div class="field" [class.invalid]="fe()['p_delivery']"><label>Delivery requirement <span class="required-star">*</span></label><input [(ngModel)]="p.deliveryRequirement" placeholder="e.g. weekly truck deliveries, liquefied at 18 bar" required [attr.aria-invalid]="fe()['p_delivery'] ? 'true' : null" /><app-field-error [msg]="fe()['p_delivery']" /></div>
               <div class="field"><label>Other requirements</label><textarea [(ngModel)]="p.otherRequirements" placeholder="Anything else the emitter should know"></textarea></div>
             }
             <label class="check"><input type="checkbox" [(ngModel)]="p.acceptsEscrow" /> I accept an escrow / deposit lock-in (boosts priority)</label>
@@ -108,6 +108,8 @@ export class UtilizerListingDetail {
   myProposal = computed(() => this.proposals().find((p) => p.utilizerId === this.auth.user()?.companyId && p.status !== 'WITHDRAWN') ?? null);
   q: { quantityTonnes: number; requiredPurityPct: number; transportMode: TransportMode } = { quantityTonnes: 0, requiredPurityPct: 0, transportMode: 'TRUCK' };
   limits: Record<string, number | null> = {};
+  /** Per-field messages for both the estimator and the proposal form on this page. */
+  fe = signal<FieldErrors>({});
   p = { quantityTonnes: 0, requiredPurityPct: 0, durationMonths: 12, deliveryRequirement: '', offeredPricePerTonne: 0, acceptsEscrow: true, otherRequirements: '' };
 
   ngOnInit(): void {
@@ -125,6 +127,15 @@ export class UtilizerListingDetail {
   }
   entries(o: Record<string, number> | null | undefined): [string, number][] { return o ? Object.entries(o) : []; }
   estimate(): void {
+    const l = this.l();
+    const c = new Check();
+    c.num('q_qty', this.q.quantityTonnes, 'Quantity', { gt: 0, unit: ' t' });
+    c.when(!!l && Number(this.q.quantityTonnes) > l.volumeTonnes, 'q_qty',
+      `Only ${l?.volumeTonnes} t is listed, so a larger quantity cannot be quoted.`);
+    c.num('q_purity', this.q.requiredPurityPct, 'Purity', { gt: 0, max: 100, unit: '%' });
+    if (!c.ok) { this.fe.set(c.errors); this.estError.set(null); scrollToFirstInvalid(); return; }
+    this.fe.set({});
+
     this.estimating.set(true); this.estError.set(null);
     const impurityLimits: Record<string, number> = {};
     for (const [k, v] of Object.entries(this.limits)) if (v !== null && v !== undefined && !isNaN(+v) && String(v) !== '') impurityLimits[k] = +v;
@@ -133,6 +144,21 @@ export class UtilizerListingDetail {
     });
   }
   submit(): void {
+    const l = this.l();
+    const c = new Check();
+    c.num('p_qty', this.p.quantityTonnes, 'Quantity', { gt: 0, unit: ' t' });
+    c.when(!!l && Number(this.p.quantityTonnes) > l.volumeTonnes, 'p_qty',
+      `Only ${l?.volumeTonnes} t is on offer. Ask for that or less.`);
+    c.num('p_price', this.p.offeredPricePerTonne, 'Your price', { gt: 0 });
+    // The server rejects anything under the base price, so say so here rather than round-tripping.
+    c.when(!!l && Number(this.p.offeredPricePerTonne) < l.basePricePerTonne, 'p_price',
+      `Your price must be at least the base price of ₹${l?.basePricePerTonne}/t.`);
+    c.num('p_purity', this.p.requiredPurityPct, 'Required purity', { gt: 0, max: 100, unit: '%' });
+    c.num('p_duration', this.p.durationMonths, 'Duration', { min: 1, unit: ' months' });
+    c.required('p_delivery', this.p.deliveryRequirement, 'A delivery requirement');
+    if (!c.ok) { this.fe.set(c.errors); this.error.set(null); scrollToFirstInvalid(); return; }
+    this.fe.set({});
+
     this.busy.set(true); this.error.set(null);
     const body = { ...this.p, quantityTonnes: +this.p.quantityTonnes, requiredPurityPct: +this.p.requiredPurityPct, durationMonths: +this.p.durationMonths, offeredPricePerTonne: +this.p.offeredPricePerTonne };
     this.api.submitProposal(this.id(), body).subscribe({

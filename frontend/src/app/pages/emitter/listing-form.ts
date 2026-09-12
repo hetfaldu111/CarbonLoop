@@ -4,8 +4,8 @@ import { Router, RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api.service';
 import { ListingMode, PassportDto } from '../../core/models';
 import { TonnesPipe } from '../../shared/pipes';
-import { Alert, Loading, PageHeader } from '../../shared/widgets';
-import { addDays, errMsg, toDateInput, toDateTimeInput, toIso } from '../../shared/utils';
+import { Alert, FieldError, Loading, PageHeader } from '../../shared/widgets';
+import { Check, FieldErrors, addDays, errMsg, isBlank, scrollToFirstInvalid, toDateInput, toDateTimeInput, toIso } from '../../shared/utils';
 
 const MODES: { mode: ListingMode; title: string; analogy: string; fit: string; price: string }[] = [
   { mode: 'TENDER', title: 'Tender (RFQ)', analogy: 'Wholesale', fit: 'Buyers with steady, plannable demand who can commit. Larger volume, longer duration.', price: 'Lower, trust-based. You can accept several proposals at once; the system shows the combination that earns the most.' },
@@ -15,7 +15,7 @@ const MODES: { mode: ListingMode; title: string; analogy: string; fit: string; p
 
 @Component({
   selector: 'app-listing-form',
-  imports: [FormsModule, RouterLink, TonnesPipe, Alert, Loading, PageHeader],
+  imports: [FormsModule, RouterLink, TonnesPipe, Alert, FieldError, Loading, PageHeader],
   template: `
     <app-page-header title="List CO₂ for sale" subtitle="Choose the sale mode per listing. Listed volume is locked on the passport immediately so it cannot be double-sold." />
     <app-alert [message]="error()" />
@@ -45,21 +45,21 @@ const MODES: { mode: ListingMode; title: string; analogy: string; fit: string; p
         <div class="card">
           <h3>3. Terms</h3>
           <div class="form-row">
-            <div class="field"><label>Volume to list (t)</label><input type="number" step="0.1" name="volumeTonnes" [(ngModel)]="f.volumeTonnes" required /><span class="hint">Free on this passport: <strong>{{ free() | tonnes }}</strong></span></div>
-            <div class="field"><label>{{ f.mode === 'AUCTION' ? 'Starting price (₹ / t)' : 'Base price (₹ / t)' }}</label><input type="number" name="basePricePerTonne" [(ngModel)]="f.basePricePerTonne" required /></div>
-            @if (f.mode === 'AUCTION') {<div class="field"><label>Increment per bid (₹ / t)</label><input type="number" step="1" name="bidIncrement" [(ngModel)]="f.bidIncrement" required /><span class="hint">Every bid raises the price by exactly this much.</span></div>}
-            <div class="field"><label>Minimum purity you guarantee (%)</label><input type="number" step="0.1" name="minPurityPct" [(ngModel)]="f.minPurityPct" required /></div>
+            <div class="field" [class.invalid]="fe()['volumeTonnes']"><label>Volume to list (t) <span class="required-star">*</span></label><input type="number" step="0.1" name="volumeTonnes" [(ngModel)]="f.volumeTonnes" required [attr.aria-invalid]="fe()['volumeTonnes'] ? 'true' : null" /><span class="hint">Free on this passport: <strong>{{ free() | tonnes }}</strong></span><app-field-error [msg]="fe()['volumeTonnes']" /></div>
+            <div class="field" [class.invalid]="fe()['basePricePerTonne']"><label>{{ f.mode === 'AUCTION' ? 'Starting price (₹ / t)' : 'Base price (₹ / t)' }} <span class="required-star">*</span></label><input type="number" name="basePricePerTonne" [(ngModel)]="f.basePricePerTonne" required [attr.aria-invalid]="fe()['basePricePerTonne'] ? 'true' : null" /><app-field-error [msg]="fe()['basePricePerTonne']" /></div>
+            @if (f.mode === 'AUCTION') {<div class="field" [class.invalid]="fe()['bidIncrement']"><label>Increment per bid (₹ / t) <span class="required-star">*</span></label><input type="number" step="1" name="bidIncrement" [(ngModel)]="f.bidIncrement" required [attr.aria-invalid]="fe()['bidIncrement'] ? 'true' : null" /><span class="hint">Every bid raises the price by exactly this much.</span><app-field-error [msg]="fe()['bidIncrement']" /></div>}
+            <div class="field" [class.invalid]="fe()['minPurityPct']"><label>Minimum purity you guarantee (%) <span class="required-star">*</span></label><input type="number" step="0.1" name="minPurityPct" [(ngModel)]="f.minPurityPct" required [attr.aria-invalid]="fe()['minPurityPct'] ? 'true' : null" /><app-field-error [msg]="fe()['minPurityPct']" /></div>
           </div>
           <div class="form-row">
-            <div class="field"><label>Delivery window start</label><input type="date" name="deliveryWindowStart" [(ngModel)]="f.deliveryWindowStart" required /></div>
-            <div class="field"><label>Delivery window end</label><input type="date" name="deliveryWindowEnd" [(ngModel)]="f.deliveryWindowEnd" required /></div>
-            @if (f.mode !== 'AUCTION') {<div class="field"><label>Last date to apply</label><input type="datetime-local" name="closesAt" [(ngModel)]="f.closesAt" required /><span class="hint">Proposals cannot be submitted after this.</span></div>}
+            <div class="field" [class.invalid]="fe()['deliveryWindowStart']"><label>Delivery window start <span class="required-star">*</span></label><input type="date" name="deliveryWindowStart" [(ngModel)]="f.deliveryWindowStart" required [attr.aria-invalid]="fe()['deliveryWindowStart'] ? 'true' : null" /><app-field-error [msg]="fe()['deliveryWindowStart']" /></div>
+            <div class="field" [class.invalid]="fe()['deliveryWindowEnd']"><label>Delivery window end <span class="required-star">*</span></label><input type="date" name="deliveryWindowEnd" [(ngModel)]="f.deliveryWindowEnd" required [attr.aria-invalid]="fe()['deliveryWindowEnd'] ? 'true' : null" /><app-field-error [msg]="fe()['deliveryWindowEnd']" /></div>
+            @if (f.mode !== 'AUCTION') {<div class="field" [class.invalid]="fe()['closesAt']"><label>Last date to apply <span class="required-star">*</span></label><input type="datetime-local" name="closesAt" [(ngModel)]="f.closesAt" required [attr.aria-invalid]="fe()['closesAt'] ? 'true' : null" /><span class="hint">Proposals cannot be submitted after this.</span><app-field-error [msg]="fe()['closesAt']" /></div>}
           </div>
 
           @if (f.mode === 'TENDER') {
             <div class="form-row">
-              <div class="field"><label>Delivery months (optional)</label><input type="number" min="1" step="1" name="deliveryMonths" [(ngModel)]="f.deliveryMonths" (ngModelChange)="syncMonthly()" /><span class="hint">Spread the volume over a recurring schedule.</span></div>
-              <div class="field"><label>Tonnes per month</label><input type="number" step="0.1" name="monthlyTonnes" [(ngModel)]="f.monthlyTonnes" /><span class="hint">Defaults to volume divided by months.</span></div>
+              <div class="field" [class.invalid]="fe()['deliveryMonths']"><label>Delivery months (optional)</label><input type="number" min="1" step="1" name="deliveryMonths" [(ngModel)]="f.deliveryMonths" (ngModelChange)="syncMonthly()" [attr.aria-invalid]="fe()['deliveryMonths'] ? 'true' : null" /><span class="hint">Spread the volume over a recurring schedule.</span><app-field-error [msg]="fe()['deliveryMonths']" /></div>
+              <div class="field" [class.invalid]="fe()['monthlyTonnes']"><label>Tonnes per month</label><input type="number" step="0.1" name="monthlyTonnes" [(ngModel)]="f.monthlyTonnes" [attr.aria-invalid]="fe()['monthlyTonnes'] ? 'true' : null" /><span class="hint">Defaults to volume divided by months.</span><app-field-error [msg]="fe()['monthlyTonnes']" /></div>
             </div>
             @if (f.deliveryMonths && f.monthlyTonnes) {
               <div class="alert alert-info">Agreement policy attached to this tender: <strong>{{ f.monthlyTonnes }} t per month for {{ f.deliveryMonths }} months</strong> ({{ scheduleTotal() }} t in total@if (scheduleMismatch()) {, which does not match the {{ f.volumeTonnes }} t you are listing}).</div>
@@ -68,15 +68,15 @@ const MODES: { mode: ListingMode; title: string; analogy: string; fit: string; p
 
           @if (f.mode === 'AUCTION') {
             <div class="form-row">
-              <div class="field"><label>Bidding opens at</label><input type="datetime-local" name="scheduledStartAt" [(ngModel)]="f.scheduledStartAt" required /><span class="hint">Must be in the future.</span></div>
-              <div class="field"><label>Stays live for (minutes)</label><input type="number" min="1" step="1" name="durationMinutes" [(ngModel)]="f.durationMinutes" required /></div>
+              <div class="field" [class.invalid]="fe()['scheduledStartAt']"><label>Bidding opens at <span class="required-star">*</span></label><input type="datetime-local" name="scheduledStartAt" [(ngModel)]="f.scheduledStartAt" required [attr.aria-invalid]="fe()['scheduledStartAt'] ? 'true' : null" /><span class="hint">Must be in the future.</span><app-field-error [msg]="fe()['scheduledStartAt']" /></div>
+              <div class="field" [class.invalid]="fe()['durationMinutes']"><label>Stays live for (minutes) <span class="required-star">*</span></label><input type="number" min="1" step="1" name="durationMinutes" [(ngModel)]="f.durationMinutes" required [attr.aria-invalid]="fe()['durationMinutes'] ? 'true' : null" /><app-field-error [msg]="fe()['durationMinutes']" /></div>
             </div>
             <div class="alert alert-info">{{ auctionSummary() }}</div>
             @if (startInPast()) {<div class="alert alert-warn">The opening time is in the past. Pick a future time.</div>}
           }
           <div class="field"><label>Description (public)</label><textarea name="description" [(ngModel)]="f.description" placeholder="What buyers should know. Company identity stays hidden until a proposal is made."></textarea></div>
         </div>
-        <div class="form-actions"><a class="btn" routerLink="/emitter/listings">Cancel</a><button class="btn btn-primary" [disabled]="busy() || !canSubmit()">{{ f.mode === 'AUCTION' ? 'Schedule auction' : 'Publish listing' }} &amp; lock {{ f.volumeTonnes | tonnes }}</button></div>
+        <div class="form-actions"><a class="btn" routerLink="/emitter/listings">Cancel</a><button class="btn btn-primary" [disabled]="busy()">{{ f.mode === 'AUCTION' ? 'Schedule auction' : 'Publish listing' }} &amp; lock {{ f.volumeTonnes | tonnes }}</button></div>
       </form>
     }`,
 })
@@ -89,6 +89,8 @@ export class ListingForm {
   loading = signal(true);
   busy = signal(false);
   error = signal<string | null>(null);
+  /** Per-field messages, filled only when a submit is attempted. */
+  fe = signal<FieldErrors>({});
   selected = signal<PassportDto | null>(null);
   free = computed(() => { const p = this.selected(); return p ? p.totalVolumeTonnes - p.allocatedTonnes : 0; });
   f = {
@@ -136,7 +138,45 @@ export class ListingForm {
     this.selected.set(p);
     if (p) { this.f.minPurityPct = Math.floor(p.concentrationPct * 10) / 10; }
   }
+  private validate(): Check {
+    const c = new Check();
+    const f = this.f;
+    c.required('passportId', f.passportId, 'A verified passport');
+    c.num('volumeTonnes', f.volumeTonnes, 'Volume to list', { gt: 0, unit: ' t' });
+    c.when(!isBlank(f.volumeTonnes) && Number(f.volumeTonnes) > this.free(), 'volumeTonnes',
+      `Only ${this.free()} t is free on this passport. Listed volume is locked immediately, so it cannot exceed that.`);
+    c.num('basePricePerTonne', f.basePricePerTonne, f.mode === 'AUCTION' ? 'Starting price' : 'Base price', { gt: 0 });
+    c.num('minPurityPct', f.minPurityPct, 'Minimum purity', { gt: 0, max: 100, unit: '%' });
+
+    c.required('deliveryWindowStart', f.deliveryWindowStart, 'Delivery window start');
+    c.required('deliveryWindowEnd', f.deliveryWindowEnd, 'Delivery window end');
+    c.when(Check.notAfter(f.deliveryWindowStart, f.deliveryWindowEnd), 'deliveryWindowEnd',
+      'The delivery window must end after it starts.');
+
+    if (f.mode === 'AUCTION') {
+      c.num('bidIncrement', f.bidIncrement, 'Increment per bid', { gt: 0 });
+      c.required('scheduledStartAt', f.scheduledStartAt, 'Bidding opens at');
+      c.when(Check.inPast(f.scheduledStartAt), 'scheduledStartAt', 'Bidding must open in the future.');
+      c.num('durationMinutes', f.durationMinutes, 'Auction duration', { gt: 0, unit: ' minutes' });
+    } else {
+      c.required('closesAt', f.closesAt, 'Last date to apply');
+      c.when(Check.inPast(f.closesAt), 'closesAt', 'The closing date must be in the future, or nobody can apply.');
+    }
+
+    if (f.mode === 'TENDER') {
+      if (!isBlank(f.deliveryMonths)) c.num('deliveryMonths', f.deliveryMonths, 'Delivery months', { min: 1 });
+      if (!isBlank(f.monthlyTonnes)) c.num('monthlyTonnes', f.monthlyTonnes, 'Tonnes per month', { gt: 0, unit: ' t' });
+      c.when(!isBlank(f.deliveryMonths) && isBlank(f.monthlyTonnes), 'monthlyTonnes',
+        'Give the tonnes per month, or clear the delivery months.');
+    }
+    return c;
+  }
+
   submit(): void {
+    const c = this.validate();
+    if (!c.ok) { this.fe.set(c.errors); this.error.set(null); scrollToFirstInvalid(); return; }
+    this.fe.set({});
+
     this.busy.set(true); this.error.set(null);
     this.api.createListing({
       passportId: this.f.passportId, mode: this.f.mode, volumeTonnes: +this.f.volumeTonnes, basePricePerTonne: +this.f.basePricePerTonne, minPurityPct: +this.f.minPurityPct,

@@ -5,12 +5,12 @@ import { ApiService } from '../../core/api.service';
 import { CompanyDto } from '../../core/models';
 import { StatusBadge } from '../../shared/badges';
 import { LabelPipe } from '../../shared/pipes';
-import { Alert, EmptyState, Loading, PageHeader } from '../../shared/widgets';
-import { errMsg } from '../../shared/utils';
+import { Alert, EmptyState, FieldError, Loading, PageHeader } from '../../shared/widgets';
+import { Check, errMsg } from '../../shared/utils';
 
 @Component({
   selector: 'app-admin-approvals',
-  imports: [DatePipe, FormsModule, StatusBadge, LabelPipe, Alert, EmptyState, Loading, PageHeader],
+  imports: [DatePipe, FormsModule, StatusBadge, LabelPipe, Alert, EmptyState, FieldError, Loading, PageHeader],
   template: `
     <app-page-header title="Pending company approvals" subtitle="Review the sign-up form, then verify by call or site visit before approving. Nothing can transact until approved." />
     <app-alert [message]="error()" />
@@ -40,8 +40,12 @@ import { errMsg } from '../../shared/utils';
             </div>
             @if (rejecting() === c.id) {
               <div class="row mt">
-                <input name="reason" [(ngModel)]="reason" placeholder="Reason for rejection (sent to the company)" style="max-width:520px" />
-                <button class="btn btn-danger btn-sm" (click)="reject(c)" [disabled]="!reason.trim() || busy() === c.id">Confirm rejection</button>
+                <span class="field inline-field" [class.invalid]="reasonError()">
+                  <input name="reason" [(ngModel)]="reason" placeholder="Reason for rejection (sent to the company)" required
+                         [attr.aria-invalid]="reasonError() ? 'true' : null" style="max-width:520px" />
+                  <app-field-error [msg]="reasonError()" />
+                </span>
+                <button class="btn btn-danger btn-sm" (click)="reject(c)" [disabled]="busy() === c.id">Confirm rejection</button>
               </div>
             }
           </div>
@@ -75,7 +79,13 @@ export class AdminApprovals {
       error: (e) => { this.error.set(errMsg(e)); this.busy.set(null); },
     });
   }
+  reasonError = signal<string | null>(null);
+
   reject(c: CompanyDto): void {
+    const check = new Check();
+    check.minLength('reason', this.reason, 5, 'A reason');
+    if (!check.ok) { this.reasonError.set(check.errors['reason']); return; }
+    this.reasonError.set(null);
     this.busy.set(c.id); this.error.set(null);
     this.api.rejectCompany(c.id, this.reason.trim()).subscribe({
       next: () => { this.ok.set(`${c.name} rejected.`); this.busy.set(null); this.rejecting.set(null); this.reason = ''; this.load(); },

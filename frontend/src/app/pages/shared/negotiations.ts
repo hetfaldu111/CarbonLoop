@@ -7,8 +7,18 @@ import { AuthService } from '../../core/auth.service';
 import { ContractOfferInput, DirectoryEntry, ListingDto, NegotiationDto, PassportDto } from '../../core/models';
 import { StatusBadge } from '../../shared/badges';
 import { LabelPipe, MoneyPipe, TonnesPipe } from '../../shared/pipes';
-import { Alert, EmptyState, Loading, PageHeader } from '../../shared/widgets';
-import { errMsg } from '../../shared/utils';
+import { Alert, EmptyState, FieldError, Loading, PageHeader } from '../../shared/widgets';
+import { Check, FieldErrors, errMsg, scrollToFirstInvalid } from '../../shared/utils';
+
+/** The commercial terms are identical whether opening a negotiation or countering inside one. */
+function validateOffer(o: ContractOfferInput, c = new Check()): Check {
+  c.num('pricePerTonne', o.pricePerTonne, 'Price per tonne', { gt: 0 });
+  c.num('volumePerMonth', o.volumePerMonth, 'Volume per month', { gt: 0, unit: ' t' });
+  c.num('durationMonths', o.durationMonths, 'Duration', { min: 1, unit: ' months' });
+  c.num('depositPct', o.depositPct, 'Deposit', { min: 0, max: 100, unit: '%' });
+  c.num('supplyGapThresholdPct', o.supplyGapThresholdPct, 'Supply-gap threshold', { min: 0, max: 100, unit: '%' });
+  return c;
+}
 
 function base(auth: AuthService): string { return auth.hasRole('EMITTER') ? '/emitter' : '/utilizer'; }
 
@@ -52,17 +62,17 @@ export class NegotiationsList {
 
 @Component({
   selector: 'app-offer-form',
-  imports: [FormsModule],
+  imports: [FormsModule, FieldError],
   template: `
     <div class="form-row">
-      <div class="field"><label>Price (₹ / tonne)</label><input type="number" [(ngModel)]="o().pricePerTonne" /></div>
-      <div class="field"><label>Volume per month (t)</label><input type="number" step="0.1" [(ngModel)]="o().volumePerMonth" /></div>
-      <div class="field"><label>Duration (months)</label><input type="number" [(ngModel)]="o().durationMonths" /></div>
+      <div class="field" [class.invalid]="fe()['pricePerTonne']"><label>Price (₹ / tonne) <span class="required-star">*</span></label><input type="number" [(ngModel)]="o().pricePerTonne" required [attr.aria-invalid]="fe()['pricePerTonne'] ? 'true' : null" /><app-field-error [msg]="fe()['pricePerTonne']" /></div>
+      <div class="field" [class.invalid]="fe()['volumePerMonth']"><label>Volume per month (t) <span class="required-star">*</span></label><input type="number" step="0.1" [(ngModel)]="o().volumePerMonth" required [attr.aria-invalid]="fe()['volumePerMonth'] ? 'true' : null" /><app-field-error [msg]="fe()['volumePerMonth']" /></div>
+      <div class="field" [class.invalid]="fe()['durationMonths']"><label>Duration (months) <span class="required-star">*</span></label><input type="number" [(ngModel)]="o().durationMonths" required [attr.aria-invalid]="fe()['durationMonths'] ? 'true' : null" /><app-field-error [msg]="fe()['durationMonths']" /></div>
       <div class="field"><label>Pricing structure</label><select [(ngModel)]="o().pricingStructure"><option value="FIXED">Fixed for full duration</option><option value="INDEXED">Indexed to cost formula</option></select></div>
     </div>
     <div class="form-row">
-      <div class="field"><label>Deposit / escrow (%)</label><input type="number" step="0.5" [(ngModel)]="o().depositPct" /><span class="hint">Held at signing; forfeited + tier penalty if broken early.</span></div>
-      <div class="field"><label>SLA supply-gap threshold (%)</label><input type="number" step="0.5" [(ngModel)]="o().supplyGapThresholdPct" /><span class="hint">Shortfall allowed before penalty. Ties into forecast alerts.</span></div>
+      <div class="field" [class.invalid]="fe()['depositPct']"><label>Deposit / escrow (%) <span class="required-star">*</span></label><input type="number" step="0.5" [(ngModel)]="o().depositPct" required [attr.aria-invalid]="fe()['depositPct'] ? 'true' : null" /><span class="hint">Held at signing; forfeited + tier penalty if broken early.</span><app-field-error [msg]="fe()['depositPct']" /></div>
+      <div class="field" [class.invalid]="fe()['supplyGapThresholdPct']"><label>SLA supply-gap threshold (%) <span class="required-star">*</span></label><input type="number" step="0.5" [(ngModel)]="o().supplyGapThresholdPct" required [attr.aria-invalid]="fe()['supplyGapThresholdPct'] ? 'true' : null" /><span class="hint">Shortfall allowed before penalty. Ties into forecast alerts.</span><app-field-error [msg]="fe()['supplyGapThresholdPct']" /></div>
       <div class="field"><label>&nbsp;</label><label class="check"><input type="checkbox" [(ngModel)]="o().takeOrPay" /> Take-or-pay clause</label></div>
     </div>
     <div class="field"><label>Message</label><textarea [(ngModel)]="o().message" placeholder="Context for the counterparty"></textarea></div>
@@ -70,11 +80,13 @@ export class NegotiationsList {
 })
 export class OfferForm {
   o = input.required<ContractOfferInput>();
+  /** Supplied by whichever page hosts the form, so both share one set of rules. */
+  fe = input<FieldErrors>({});
 }
 
 @Component({
   selector: 'app-negotiation-new',
-  imports: [FormsModule, RouterLink, OfferForm, Alert, Loading, PageHeader, LabelPipe],
+  imports: [FormsModule, RouterLink, OfferForm, Alert, FieldError, Loading, PageHeader, LabelPipe],
   template: `
     <app-page-header title="Start a negotiation" subtitle="Direct-connect with a counterparty and propose the first version of a long-term contract." />
     <app-alert [message]="error()" />
@@ -82,21 +94,23 @@ export class OfferForm {
     @else {
       <div class="card">
         <div class="form-row">
-          <div class="field"><label>{{ isEmitter ? 'Utilizer' : 'Emitter' }}</label>
-            <select [(ngModel)]="counterparty" (ngModelChange)="onCounterparty()"><option value="">Choose…</option>@for (d of directory(); track d.id) {<option [value]="d.id">{{ d.name }} — {{ d.city }}, {{ d.state }} ({{ d.sector | label }}, {{ d.tier | label }})</option>}</select>
+          <div class="field" [class.invalid]="fe()['counterparty']"><label>{{ isEmitter ? 'Utilizer' : 'Emitter' }} <span class="required-star">*</span></label>
+            <select [(ngModel)]="counterparty" (ngModelChange)="onCounterparty()" required [attr.aria-invalid]="fe()['counterparty'] ? 'true' : null"><option value="">Choose…</option>@for (d of directory(); track d.id) {<option [value]="d.id">{{ d.name }} — {{ d.city }}, {{ d.state }} ({{ d.sector | label }}, {{ d.tier | label }})</option>}</select>
+            <app-field-error [msg]="fe()['counterparty']" />
           </div>
-          <div class="field"><label>CO₂ Passport</label>
-            <select [(ngModel)]="passportId">
+          <div class="field" [class.invalid]="fe()['passportId']"><label>CO₂ Passport <span class="required-star">*</span></label>
+            <select [(ngModel)]="passportId" required [attr.aria-invalid]="fe()['passportId'] ? 'true' : null">
               <option value="">Choose…</option>
               @if (isEmitter) { @for (p of passports(); track p.id) {<option [value]="p.id">{{ p.passportCode }} — {{ p.source }} ({{ p.concentrationPct }}%, free {{ p.totalVolumeTonnes - p.allocatedTonnes }} t)</option>} }
               @else { @for (l of listings(); track l.passportId) {<option [value]="l.passportId">{{ l.passportCode }} — {{ l.city }}, {{ l.state }} ({{ l.concentrationPct }}%)</option>} }
             </select>
             @if (!isEmitter) {<span class="hint">Passports are discovered through the emitter's listings. Only verified passports can be contracted.</span>}
+            <app-field-error [msg]="fe()['passportId']" />
           </div>
         </div>
         <h3 class="mt">Initial offer (v1)</h3>
-        <app-offer-form [o]="offer" />
-        <div class="form-actions"><a class="btn" [routerLink]="base + '/negotiations'">Cancel</a><button class="btn btn-primary" (click)="submit()" [disabled]="busy() || !counterparty || !passportId">Send offer</button></div>
+        <app-offer-form [o]="offer" [fe]="fe()" />
+        <div class="form-actions"><a class="btn" [routerLink]="base + '/negotiations'">Cancel</a><button class="btn btn-primary" (click)="submit()" [disabled]="busy()">Send offer</button></div>
       </div>
     }`,
 })
@@ -112,6 +126,8 @@ export class NegotiationNew {
   loading = signal(true);
   busy = signal(false);
   error = signal<string | null>(null);
+  /** Per-field messages, filled only when the request is submitted. */
+  fe = signal<FieldErrors>({});
   counterparty = '';
   passportId = '';
   offer: ContractOfferInput = { pricePerTonne: 3600, volumePerMonth: 40, durationMonths: 12, pricingStructure: 'FIXED', takeOrPay: true, supplyGapThresholdPct: 10, depositPct: 10, message: '' };
@@ -129,6 +145,13 @@ export class NegotiationNew {
     }
   }
   submit(): void {
+    const c = new Check();
+    c.required('counterparty', this.counterparty, 'A counterparty');
+    c.required('passportId', this.passportId, 'A passport');
+    validateOffer(this.offer, c);
+    if (!c.ok) { this.fe.set(c.errors); this.error.set(null); scrollToFirstInvalid(); return; }
+    this.fe.set({});
+
     this.busy.set(true); this.error.set(null);
     this.api.createNegotiation({ counterpartyCompanyId: this.counterparty, passportId: this.passportId, offer: { ...this.offer, pricePerTonne: +this.offer.pricePerTonne, volumePerMonth: +this.offer.volumePerMonth, durationMonths: +this.offer.durationMonths, depositPct: +this.offer.depositPct, supplyGapThresholdPct: +this.offer.supplyGapThresholdPct } }).subscribe({
       next: (n) => { this.busy.set(false); this.router.navigateByUrl(`${this.base}/negotiations/${n.id}`); },
@@ -184,7 +207,7 @@ export class NegotiationNew {
       @if (counter() && n.status === 'OPEN') {
         <div class="card mt">
           <h3>Counter-offer (v{{ n.offers.length + 1 }})</h3>
-          <app-offer-form [o]="draft" />
+          <app-offer-form [o]="draft" [fe]="fe()" />
           <div class="form-actions"><button class="btn" (click)="counter.set(false)">Discard</button><button class="btn btn-primary" (click)="sendCounter()" [disabled]="busy()">Send counter-offer</button></div>
         </div>
       }
@@ -202,6 +225,8 @@ export class NegotiationDetail {
   error = signal<string | null>(null);
   ok = signal<string | null>(null);
   draft: ContractOfferInput = { pricePerTonne: 0, volumePerMonth: 0, durationMonths: 12, pricingStructure: 'FIXED', takeOrPay: true, supplyGapThresholdPct: 10, depositPct: 10, message: '' };
+  /** Per-field messages for the counter-offer draft. */
+  fe = signal<FieldErrors>({});
   acceptedVersion = computed(() => this.n()?.offers.find((o) => o.status === 'ACCEPTED')?.version ?? '');
 
   ngOnInit(): void { this.load(); }
@@ -219,6 +244,10 @@ export class NegotiationDetail {
     this.api.rejectOffer(this.id(), offerId).subscribe({ next: (n) => { this.n.set(n); this.busy.set(false); }, error: (e) => { this.error.set(errMsg(e)); this.busy.set(false); } });
   }
   sendCounter(): void {
+    const c = validateOffer(this.draft);
+    if (!c.ok) { this.fe.set(c.errors); this.error.set(null); scrollToFirstInvalid(); return; }
+    this.fe.set({});
+
     this.busy.set(true); this.error.set(null);
     const d = this.draft;
     this.api.counterOffer(this.id(), { ...d, pricePerTonne: +d.pricePerTonne, volumePerMonth: +d.volumePerMonth, durationMonths: +d.durationMonths, depositPct: +d.depositPct, supplyGapThresholdPct: +d.supplyGapThresholdPct }).subscribe({

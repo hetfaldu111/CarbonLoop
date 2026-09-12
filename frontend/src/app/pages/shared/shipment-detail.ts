@@ -7,12 +7,12 @@ import { AuthService } from '../../core/auth.service';
 import { ShipmentDto } from '../../core/models';
 import { StatusBadge } from '../../shared/badges';
 import { LabelPipe, MoneyPipe, TonnesPipe } from '../../shared/pipes';
-import { Alert, Loading, PageHeader } from '../../shared/widgets';
-import { errMsg } from '../../shared/utils';
+import { Alert, FieldError, Loading, PageHeader } from '../../shared/widgets';
+import { Check, FieldErrors, errMsg, scrollToFirstInvalid } from '../../shared/utils';
 
 @Component({
   selector: 'app-shipment-detail',
-  imports: [DatePipe, DecimalPipe, FormsModule, RouterLink, StatusBadge, LabelPipe, MoneyPipe, TonnesPipe, Alert, Loading, PageHeader],
+  imports: [DatePipe, DecimalPipe, FormsModule, RouterLink, StatusBadge, LabelPipe, MoneyPipe, TonnesPipe, Alert, FieldError, Loading, PageHeader],
   template: `
     @if (loading()) {<app-loading />}
     <app-alert [message]="error()" />
@@ -55,24 +55,24 @@ import { errMsg } from '../../shared/utils';
             <div class="card">
               <h3>Record loading</h3>
               <div class="form-row">
-                <div class="field"><label>Tamper-evident seal number</label><input [(ngModel)]="load.sealNumber" placeholder="SEAL-0000" /></div>
-                <div class="field"><label>Loaded weight (t)</label><input type="number" step="0.01" [(ngModel)]="load.loadedWeightTonnes" /></div>
-                <div class="field"><label>Signed meter reading</label><input type="number" step="0.01" [(ngModel)]="load.meterReading" /></div>
-                <div class="field"><label>Sample purity (%)</label><input type="number" step="0.01" [(ngModel)]="load.samplePurityPct" /></div>
+                <div class="field" [class.invalid]="fe()['l_seal']"><label>Tamper-evident seal number <span class="required-star">*</span></label><input [(ngModel)]="load.sealNumber" placeholder="SEAL-0000" required [attr.aria-invalid]="fe()['l_seal'] ? 'true' : null" /><app-field-error [msg]="fe()['l_seal']" /></div>
+                <div class="field" [class.invalid]="fe()['l_weight']"><label>Loaded weight (t) <span class="required-star">*</span></label><input type="number" step="0.01" [(ngModel)]="load.loadedWeightTonnes" required [attr.aria-invalid]="fe()['l_weight'] ? 'true' : null" /><app-field-error [msg]="fe()['l_weight']" /></div>
+                <div class="field" [class.invalid]="fe()['l_meter']"><label>Signed meter reading <span class="required-star">*</span></label><input type="number" step="0.01" [(ngModel)]="load.meterReading" required [attr.aria-invalid]="fe()['l_meter'] ? 'true' : null" /><app-field-error [msg]="fe()['l_meter']" /></div>
+                <div class="field" [class.invalid]="fe()['l_purity']"><label>Sample purity (%) <span class="required-star">*</span></label><input type="number" step="0.01" [(ngModel)]="load.samplePurityPct" required [attr.aria-invalid]="fe()['l_purity'] ? 'true' : null" /><app-field-error [msg]="fe()['l_purity']" /></div>
               </div>
-              <div class="form-actions"><button class="btn btn-primary" (click)="doLoad()" [disabled]="busy() || !load.sealNumber">Confirm loaded &amp; in transit</button></div>
+              <div class="form-actions"><button class="btn btn-primary" (click)="doLoad()" [disabled]="busy()">Confirm loaded &amp; in transit</button></div>
             </div>
           }
           @if (canDeliver()) {
             <div class="card">
               <h3>Record delivery</h3>
               <div class="form-row">
-                <div class="field"><label>Seal number observed</label><input [(ngModel)]="deliver.sealNumber" placeholder="must match loading seal" /></div>
-                <div class="field"><label>Delivered weight (t)</label><input type="number" step="0.01" [(ngModel)]="deliver.deliveredWeightTonnes" /></div>
-                <div class="field"><label>Signed meter reading</label><input type="number" step="0.01" [(ngModel)]="deliver.meterReading" /></div>
-                <div class="field"><label>Sample purity (%)</label><input type="number" step="0.01" [(ngModel)]="deliver.samplePurityPct" /></div>
+                <div class="field" [class.invalid]="fe()['d_seal']"><label>Seal number observed <span class="required-star">*</span></label><input [(ngModel)]="deliver.sealNumber" placeholder="must match loading seal" required [attr.aria-invalid]="fe()['d_seal'] ? 'true' : null" /><app-field-error [msg]="fe()['d_seal']" /></div>
+                <div class="field" [class.invalid]="fe()['d_weight']"><label>Delivered weight (t) <span class="required-star">*</span></label><input type="number" step="0.01" [(ngModel)]="deliver.deliveredWeightTonnes" required [attr.aria-invalid]="fe()['d_weight'] ? 'true' : null" /><app-field-error [msg]="fe()['d_weight']" /></div>
+                <div class="field" [class.invalid]="fe()['d_meter']"><label>Signed meter reading <span class="required-star">*</span></label><input type="number" step="0.01" [(ngModel)]="deliver.meterReading" required [attr.aria-invalid]="fe()['d_meter'] ? 'true' : null" /><app-field-error [msg]="fe()['d_meter']" /></div>
+                <div class="field" [class.invalid]="fe()['d_purity']"><label>Sample purity (%) <span class="required-star">*</span></label><input type="number" step="0.01" [(ngModel)]="deliver.samplePurityPct" required [attr.aria-invalid]="fe()['d_purity'] ? 'true' : null" /><app-field-error [msg]="fe()['d_purity']" /></div>
               </div>
-              <div class="form-actions"><button class="btn btn-primary" (click)="doDeliver()" [disabled]="busy() || !deliver.sealNumber">Confirm delivery &amp; reconcile</button></div>
+              <div class="form-actions"><button class="btn btn-primary" (click)="doDeliver()" [disabled]="busy()">Confirm delivery &amp; reconcile</button></div>
             </div>
           }
           <div class="card">
@@ -98,6 +98,8 @@ export class ShipmentDetail {
   busy = signal(false);
   error = signal<string | null>(null);
   ok = signal<string | null>(null);
+  /** Per-field messages, filled only when one of the two forms is submitted. */
+  fe = signal<FieldErrors>({});
   load = { sealNumber: '', loadedWeightTonnes: 0, meterReading: 0, samplePurityPct: 0 };
   deliver = { sealNumber: '', deliveredWeightTonnes: 0, meterReading: 0, samplePurityPct: 0 };
 
@@ -116,6 +118,13 @@ export class ShipmentDetail {
     });
   }
   doLoad(): void {
+    const c = new Check();
+    c.required('l_seal', this.load.sealNumber, 'The seal number');
+    c.num('l_weight', this.load.loadedWeightTonnes, 'Loaded weight', { gt: 0, unit: ' t' });
+    c.num('l_meter', this.load.meterReading, 'The meter reading', { min: 0 });
+    c.num('l_purity', this.load.samplePurityPct, 'Sample purity', { gt: 0, max: 100, unit: '%' });
+    if (!c.ok) { this.fe.set(c.errors); scrollToFirstInvalid(); return; }
+    this.fe.set({});
     this.busy.set(true); this.error.set(null);
     this.api.loadShipment(this.id(), { ...this.load, loadedWeightTonnes: +this.load.loadedWeightTonnes, meterReading: +this.load.meterReading, samplePurityPct: +this.load.samplePurityPct }).subscribe({
       next: (s) => { this.s.set(s); this.busy.set(false); this.ok.set('Loading recorded. Shipment is in transit.'); },
@@ -123,6 +132,13 @@ export class ShipmentDetail {
     });
   }
   doDeliver(): void {
+    const c = new Check();
+    c.required('d_seal', this.deliver.sealNumber, 'The seal number');
+    c.num('d_weight', this.deliver.deliveredWeightTonnes, 'Delivered weight', { gt: 0, unit: ' t' });
+    c.num('d_meter', this.deliver.meterReading, 'The meter reading', { min: 0 });
+    c.num('d_purity', this.deliver.samplePurityPct, 'Sample purity', { gt: 0, max: 100, unit: '%' });
+    if (!c.ok) { this.fe.set(c.errors); scrollToFirstInvalid(); return; }
+    this.fe.set({});
     this.busy.set(true); this.error.set(null);
     this.api.deliverShipment(this.id(), { ...this.deliver, deliveredWeightTonnes: +this.deliver.deliveredWeightTonnes, meterReading: +this.deliver.meterReading, samplePurityPct: +this.deliver.samplePurityPct }).subscribe({
       next: (s) => { this.s.set(s); this.busy.set(false); this.ok.set(s.status === 'FLAGGED' ? 'Delivery recorded but reconciliation FLAGGED this shipment.' : 'Delivery recorded. All reconciliation checks passed.'); },

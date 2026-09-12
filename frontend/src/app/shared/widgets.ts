@@ -4,6 +4,14 @@ import { AllocationDto, CostEstimateDto } from '../core/models';
 import { LabelPipe, MoneyPipe, TonnesPipe } from './pipes';
 
 @Component({
+  selector: 'app-field-error',
+  template: `@if (msg()) {<span class="field-error"><span class="fe-ico" aria-hidden="true">!</span>{{ msg() }}</span>}`,
+})
+export class FieldError {
+  msg = input<string | undefined | null>();
+}
+
+@Component({
   selector: 'app-page-header',
   template: `
     <div class="page-header">

@@ -7,12 +7,12 @@ import { ApiService } from '../../core/api.service';
 import { AllocationDto, ForecastDto, PassportDto } from '../../core/models';
 import { StatusBadge } from '../../shared/badges';
 import { LabelPipe, TonnesPipe } from '../../shared/pipes';
-import { Alert, AllocationBar, Loading, PageHeader } from '../../shared/widgets';
-import { addDays, errMsg, toDateInput } from '../../shared/utils';
+import { Alert, AllocationBar, FieldError, Loading, PageHeader } from '../../shared/widgets';
+import { Check, FieldErrors, addDays, errMsg, scrollToFirstInvalid, toDateInput } from '../../shared/utils';
 
 @Component({
   selector: 'app-passport-detail',
-  imports: [DatePipe, DecimalPipe, JsonPipe, FormsModule, RouterLink, StatusBadge, LabelPipe, TonnesPipe, Alert, AllocationBar, Loading, PageHeader],
+  imports: [DatePipe, DecimalPipe, JsonPipe, FormsModule, RouterLink, StatusBadge, LabelPipe, TonnesPipe, Alert, AllocationBar, FieldError, Loading, PageHeader],
   template: `
     @if (loading()) {<app-loading />}
     <app-alert [message]="error()" />
@@ -85,10 +85,10 @@ import { addDays, errMsg, toDateInput } from '../../shared/utils';
         <p class="muted small">Declaring an expected dip (e.g. planned maintenance) below {{ p.dailyTonnage }} t/day proactively notifies every utilizer sourcing from this passport, with alternative supply suggestions.</p>
         @if (showForecast()) {
           <div class="form-row">
-            <div class="field"><label>Period start</label><input type="date" [(ngModel)]="fc.periodStart" /></div>
-            <div class="field"><label>Period end</label><input type="date" [(ngModel)]="fc.periodEnd" /></div>
-            <div class="field"><label>Expected output (t/day)</label><input type="number" step="0.1" [(ngModel)]="fc.expectedTonnesPerDay" /></div>
-            <div class="field"><label>Reason</label><input [(ngModel)]="fc.reason" placeholder="Planned kiln maintenance" /></div>
+            <div class="field" [class.invalid]="fe()['start']"><label>Period start <span class="required-star">*</span></label><input type="date" [(ngModel)]="fc.periodStart" required [attr.aria-invalid]="fe()['start'] ? 'true' : null" /><app-field-error [msg]="fe()['start']" /></div>
+            <div class="field" [class.invalid]="fe()['end']"><label>Period end <span class="required-star">*</span></label><input type="date" [(ngModel)]="fc.periodEnd" required [attr.aria-invalid]="fe()['end'] ? 'true' : null" /><app-field-error [msg]="fe()['end']" /></div>
+            <div class="field" [class.invalid]="fe()['tpd']"><label>Expected output (t/day) <span class="required-star">*</span></label><input type="number" step="0.1" [(ngModel)]="fc.expectedTonnesPerDay" required [attr.aria-invalid]="fe()['tpd'] ? 'true' : null" /><app-field-error [msg]="fe()['tpd']" /></div>
+            <div class="field" [class.invalid]="fe()['reason']"><label>Reason <span class="required-star">*</span></label><input [(ngModel)]="fc.reason" placeholder="Planned kiln maintenance" required [attr.aria-invalid]="fe()['reason'] ? 'true' : null" /><app-field-error [msg]="fe()['reason']" /></div>
           </div>
           <div class="form-actions"><button class="btn btn-primary" (click)="addForecast()" [disabled]="busy()">Publish forecast</button></div>
         }
@@ -120,7 +120,18 @@ export class PassportDetail {
   }
   entries(o: Record<string, number> | null | undefined): [string, number][] { return o ? Object.entries(o) : []; }
   hasExtra(p: PassportDto): boolean { return !!p.extraAttributes && Object.keys(p.extraAttributes).length > 0; }
+  /** Per-field messages for the forecast form. */
+  fe = signal<FieldErrors>({});
+
   addForecast(): void {
+    const c = new Check();
+    c.required('start', this.fc.periodStart, 'Period start');
+    c.required('end', this.fc.periodEnd, 'Period end');
+    c.when(Check.notAfter(this.fc.periodStart, this.fc.periodEnd), 'end', 'The period must end after it starts.');
+    c.num('tpd', this.fc.expectedTonnesPerDay, 'Expected output', { min: 0, unit: ' t/day' });
+    c.minLength('reason', this.fc.reason, 3, 'A reason');
+    if (!c.ok) { this.fe.set(c.errors); scrollToFirstInvalid(); return; }
+    this.fe.set({});
     this.busy.set(true); this.error.set(null);
     this.api.createForecast(this.id(), { ...this.fc, expectedTonnesPerDay: +this.fc.expectedTonnesPerDay }).subscribe({
       next: (f) => { this.forecasts.update((fs) => [f, ...fs]); this.busy.set(false); this.showForecast.set(false); this.ok.set('Forecast published. Affected utilizers have been notified with alternatives.'); },

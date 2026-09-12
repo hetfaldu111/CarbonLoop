@@ -6,12 +6,12 @@ import { ApiService } from '../../core/api.service';
 import { AgreementDto, IMPURITIES, PassportDto, VerificationRequestDto } from '../../core/models';
 import { StatusBadge } from '../../shared/badges';
 import { LabelPipe, MoneyPipe, TonnesPipe } from '../../shared/pipes';
-import { Alert, Loading, PageHeader } from '../../shared/widgets';
-import { errMsg } from '../../shared/utils';
+import { Alert, FieldError, Loading, PageHeader } from '../../shared/widgets';
+import { Check, FieldErrors, errMsg, scrollToFirstInvalid } from '../../shared/utils';
 
 @Component({
   selector: 'app-lab-request-detail',
-  imports: [DatePipe, JsonPipe, FormsModule, RouterLink, StatusBadge, LabelPipe, MoneyPipe, TonnesPipe, Alert, Loading, PageHeader],
+  imports: [DatePipe, JsonPipe, FormsModule, RouterLink, StatusBadge, LabelPipe, MoneyPipe, TonnesPipe, Alert, FieldError, Loading, PageHeader],
   template: `
     @if (loading()) {<app-loading />}
     <app-alert [message]="error()" />
@@ -45,15 +45,15 @@ import { errMsg } from '../../shared/utils';
             <h3>Measured results &amp; decision</h3>
             @if (r.type === 'PASSPORT_COA') {
               <div class="form-row">
-                <div class="field"><label>Measured CO₂ concentration (%)</label><input type="number" step="0.01" [(ngModel)]="d.concentrationPct" /></div>
-                <div class="field"><label>COA validity (months)</label><input type="number" [(ngModel)]="d.coaValidMonths" /><span class="hint">3–6 months; re-testing is queued automatically on expiry.</span></div>
+                <div class="field" [class.invalid]="fe()['conc']"><label>Measured CO₂ concentration (%) <span class="required-star">*</span></label><input type="number" step="0.01" [(ngModel)]="d.concentrationPct" required [attr.aria-invalid]="fe()['conc'] ? 'true' : null" /><span class="hint">Required to approve.</span><app-field-error [msg]="fe()['conc']" /></div>
+                <div class="field" [class.invalid]="fe()['coa']"><label>COA validity (months) <span class="required-star">*</span></label><input type="number" [(ngModel)]="d.coaValidMonths" required [attr.aria-invalid]="fe()['coa'] ? 'true' : null" /><span class="hint">3–6 months; re-testing is queued automatically on expiry.</span><app-field-error [msg]="fe()['coa']" /></div>
               </div>
               <div class="form-row">@for (i of impurities; track i) {<div class="field"><label>{{ i }} measured (ppm)</label><input type="number" step="0.1" [(ngModel)]="d.impurities[i]" /></div>}</div>
               @if (deviation(); as dev) {<div class="alert" [class.alert-warn]="dev.length" [class.alert-success]="!dev.length">@if (dev.length) {Deviations from claim: {{ dev.join(', ') }}} @else {Measurements match the claimed spec.}</div>}
             } @else {
               <p class="muted small">Confirm the awarded sale is consistent with the passport's verified COA and any point-of-loading sampling. Rejecting cancels the agreement and releases the locked volume.</p>
             }
-            <div class="field"><label>Notes</label><textarea [(ngModel)]="d.notes" placeholder="Method, sample IDs, observations"></textarea></div>
+            <div class="field" [class.invalid]="fe()['notes']"><label>Notes</label><textarea [(ngModel)]="d.notes" placeholder="Method, sample IDs, observations" [attr.aria-invalid]="fe()['notes'] ? 'true' : null"></textarea><span class="hint">Required when rejecting, so the emitter knows why.</span><app-field-error [msg]="fe()['notes']" /></div>
             <div class="form-actions">
               <button class="btn btn-danger" (click)="decide(false)" [disabled]="busy()">Reject</button>
               <button class="btn btn-primary" (click)="decide(true)" [disabled]="busy()">Approve{{ r.type === 'PASSPORT_COA' ? ' & issue COA' : ' sale' }}</button>
@@ -105,7 +105,20 @@ export class LabRequestDetail {
     this.busy.set(true); this.error.set(null);
     this.api.claimVerification(this.id()).subscribe({ next: (r) => { this.r.set(r); this.busy.set(false); }, error: (e) => { this.error.set(errMsg(e)); this.busy.set(false); } });
   }
+  /** Per-field messages for the decision form. */
+  fe = signal<FieldErrors>({});
+
   decide(approved: boolean): void {
+    const c = new Check();
+    if (approved) {
+      // Only an approval writes measured specs and issues a certificate.
+      c.num('conc', this.d.concentrationPct, 'Measured concentration', { gt: 0, max: 100, unit: '%' });
+      c.num('coa', this.d.coaValidMonths, 'COA validity', { gt: 0, unit: ' months' });
+    } else {
+      c.minLength('notes', this.d.notes, 5, 'A note explaining the rejection');
+    }
+    if (!c.ok) { this.fe.set(c.errors); scrollToFirstInvalid(); return; }
+    this.fe.set({});
     if (!approved && !confirm('Reject this request?')) return;
     this.busy.set(true); this.error.set(null);
     this.api.decideVerification(this.id(), { approved, notes: this.d.notes, coaValidMonths: +this.d.coaValidMonths, measuredSpecs: { concentrationPct: +this.d.concentrationPct, impurities: Object.fromEntries(Object.entries(this.d.impurities).map(([k, v]) => [k, +v])) } }).subscribe({

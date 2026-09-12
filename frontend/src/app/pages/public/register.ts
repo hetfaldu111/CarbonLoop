@@ -3,9 +3,10 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { INDIAN_STATES, RegisterRequest, Role, SECTORS } from '../../core/models';
-import { Alert } from '../../shared/widgets';
+import { Alert, FieldError } from '../../shared/widgets';
+import { DoodleBackdrop } from '../../shared/doodle-backdrop';
 import { LabelPipe } from '../../shared/pipes';
-import { errMsg } from '../../shared/utils';
+import { Check, FieldErrors, errMsg, isBlank, scrollToFirstInvalid } from '../../shared/utils';
 
 interface RoleProfile {
   captureTechnology?: string; annualCaptureCapacity?: number; emissionSource?: string;
@@ -105,14 +106,14 @@ const SECTORS_BY_ROLE: Record<Role, string[]> = {
   ADMIN: ['OTHER'],
 };
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const LAST_STEP = 4;
 
 @Component({
   selector: 'app-register',
-  imports: [FormsModule, RouterLink, Alert, LabelPipe],
+  imports: [FormsModule, RouterLink, Alert, FieldError, LabelPipe, DoodleBackdrop],
   template: `
     <div class="reg-page">
+      <app-doodle-backdrop />
       @if (done()) {
         <div class="reg-done">
           <div class="reg-done-mark" aria-hidden="true">
@@ -158,27 +159,20 @@ const LAST_STEP = 4;
             </header>
 
             <app-alert [message]="error()" />
-            @if (errorsToShow().length) {
-              <div class="alert alert-danger">
-                <strong>Complete this step to continue:</strong>
-                <ul class="mb0">@for (e of errorsToShow(); track e) {<li>{{ e }}</li>}</ul>
-              </div>
-            }
-
             <form class="form" (ngSubmit)="onSubmit()">
 
               <!-- ===== STEP 1 — your details ===== -->
               @if (step() === 1) {
                 <div class="form-row">
-                  <div class="field"><label>Company name</label><input name="companyName" [(ngModel)]="f.companyName" autocomplete="organization" /></div>
-                  <div class="field"><label>Your full name</label><input name="fullName" [(ngModel)]="f.fullName" autocomplete="name" /></div>
+                  <div class="field" [class.invalid]="fe()['companyName']"><label>Company name <span class="required-star">*</span></label><input name="companyName" [(ngModel)]="f.companyName" autocomplete="organization" required [attr.aria-invalid]="fe()['companyName'] ? 'true' : null" /><app-field-error [msg]="fe()['companyName']" /></div>
+                  <div class="field" [class.invalid]="fe()['fullName']"><label>Your full name <span class="required-star">*</span></label><input name="fullName" [(ngModel)]="f.fullName" autocomplete="name" required [attr.aria-invalid]="fe()['fullName'] ? 'true' : null" /><app-field-error [msg]="fe()['fullName']" /></div>
                 </div>
                 <div class="form-row">
-                  <div class="field"><label>Email (this is your login)</label><input type="email" name="email" [(ngModel)]="f.email" autocomplete="email" /></div>
-                  <div class="field"><label>Password</label><input type="password" name="password" [(ngModel)]="f.password" autocomplete="new-password" /><span class="hint">At least 8 characters.</span></div>
+                  <div class="field" [class.invalid]="fe()['email']"><label>Email (this is your login) <span class="required-star">*</span></label><input type="email" name="email" [(ngModel)]="f.email" autocomplete="email" required [attr.aria-invalid]="fe()['email'] ? 'true' : null" /><app-field-error [msg]="fe()['email']" /></div>
+                  <div class="field" [class.invalid]="fe()['password']"><label>Password <span class="required-star">*</span></label><input type="password" name="password" [(ngModel)]="f.password" autocomplete="new-password" required [attr.aria-invalid]="fe()['password'] ? 'true' : null" /><span class="hint">At least 8 characters.</span><app-field-error [msg]="fe()['password']" /></div>
                 </div>
                 <div class="form-row">
-                  <div class="field"><label>Phone</label><input name="contactPhone" [(ngModel)]="f.contactPhone" autocomplete="tel" /></div>
+                  <div class="field" [class.invalid]="fe()['contactPhone']"><label>Phone <span class="required-star">*</span></label><input name="contactPhone" [(ngModel)]="f.contactPhone" autocomplete="tel" required [attr.aria-invalid]="fe()['contactPhone'] ? 'true' : null" /><app-field-error [msg]="fe()['contactPhone']" /></div>
                 </div>
               }
 
@@ -273,52 +267,51 @@ const LAST_STEP = 4;
               <!-- ===== STEP 3 — role-specific ===== -->
               @if (step() === 3) {
                 <div class="form-row">
-                  <div class="field"><label>Sector</label>
-                    <select name="sector" [(ngModel)]="f.sector">@for (s of sectorOptions(); track s) {<option [value]="s">{{ s | label }}</option>}</select>
-                  </div>
-                  <div class="field"><label>Registration number (CIN / GST)</label><input name="registrationNumber" [(ngModel)]="f.registrationNumber" /></div>
+                  <div class="field" [class.invalid]="fe()['sector']"><label>Sector <span class="required-star">*</span></label><select name="sector" [(ngModel)]="f.sector" required [attr.aria-invalid]="fe()['sector'] ? 'true' : null">@for (s of sectorOptions(); track s) {<option [value]="s">{{ s | label }}</option>}</select><app-field-error [msg]="fe()['sector']" /></div>
+                  <div class="field" [class.invalid]="fe()['registrationNumber']"><label>Registration number (CIN / GST) <span class="required-star">*</span></label><input name="registrationNumber" [(ngModel)]="f.registrationNumber" required [attr.aria-invalid]="fe()['registrationNumber'] ? 'true' : null" /><app-field-error [msg]="fe()['registrationNumber']" /></div>
                 </div>
 
                 @switch (role()) {
                   @case ('EMITTER') {
                     <div class="form-row">
-                      <div class="field"><label>Capture technology</label><input name="captureTechnology" [(ngModel)]="p.captureTechnology" placeholder="e.g. Amine capture" /></div>
-                      <div class="field"><label>Annual capture capacity (t/yr)</label><input type="number" name="annualCaptureCapacity" [(ngModel)]="p.annualCaptureCapacity" /></div>
+                      <div class="field" [class.invalid]="fe()['captureTechnology']"><label>Capture technology <span class="required-star">*</span></label><input name="captureTechnology" [(ngModel)]="p.captureTechnology" placeholder="e.g. Amine capture" required [attr.aria-invalid]="fe()['captureTechnology'] ? 'true' : null" /><app-field-error [msg]="fe()['captureTechnology']" /></div>
+                      <div class="field" [class.invalid]="fe()['annualCaptureCapacity']"><label>Annual capture capacity (t/yr) <span class="required-star">*</span></label><input type="number" name="annualCaptureCapacity" [(ngModel)]="p.annualCaptureCapacity" required [attr.aria-invalid]="fe()['annualCaptureCapacity'] ? 'true' : null" /><app-field-error [msg]="fe()['annualCaptureCapacity']" /></div>
                     </div>
                     <div class="form-row">
-                      <div class="field"><label>Emission source</label><input name="emissionSource" [(ngModel)]="p.emissionSource" placeholder="e.g. Cement kiln flue gas" /></div>
+                      <div class="field" [class.invalid]="fe()['emissionSource']"><label>Emission source <span class="required-star">*</span></label><input name="emissionSource" [(ngModel)]="p.emissionSource" placeholder="e.g. Cement kiln flue gas" required [attr.aria-invalid]="fe()['emissionSource'] ? 'true' : null" /><app-field-error [msg]="fe()['emissionSource']" /></div>
                     </div>
                   }
                   @case ('UTILIZER') {
                     <div class="form-row">
-                      <div class="field"><label>Use case</label><input name="useCase" [(ngModel)]="p.useCase" placeholder="e.g. Methanol synthesis" /></div>
-                      <div class="field"><label>Annual CO₂ demand (t/yr)</label><input type="number" name="annualDemand" [(ngModel)]="p.annualDemand" /></div>
+                      <div class="field" [class.invalid]="fe()['useCase']"><label>Use case <span class="required-star">*</span></label><input name="useCase" [(ngModel)]="p.useCase" placeholder="e.g. Methanol synthesis" required [attr.aria-invalid]="fe()['useCase'] ? 'true' : null" /><app-field-error [msg]="fe()['useCase']" /></div>
+                      <div class="field" [class.invalid]="fe()['annualDemand']"><label>Annual CO₂ demand (t/yr) <span class="required-star">*</span></label><input type="number" name="annualDemand" [(ngModel)]="p.annualDemand" required [attr.aria-invalid]="fe()['annualDemand'] ? 'true' : null" /><app-field-error [msg]="fe()['annualDemand']" /></div>
                     </div>
                     <div class="form-row">
-                      <div class="field"><label>Required purity (%)</label><input type="number" step="0.1" name="requiredPurity" [(ngModel)]="p.requiredPurity" /><span class="hint">Anything above a stream's measured purity is quoted as a purification cost.</span></div>
+                      <div class="field" [class.invalid]="fe()['requiredPurity']"><label>Required purity (%) <span class="required-star">*</span></label><input type="number" step="0.1" name="requiredPurity" [(ngModel)]="p.requiredPurity" required [attr.aria-invalid]="fe()['requiredPurity'] ? 'true' : null" /><span class="hint">Anything above a stream's measured purity is quoted as a purification cost.</span><app-field-error [msg]="fe()['requiredPurity']" /></div>
                     </div>
                   }
                   @case ('TRANSPORT') {
                     <div class="form-row">
-                      <div class="field"><label>Fleet types</label>
+                      <div class="field" [class.invalid]="fe()['fleet']"><label>Fleet types <span class="required-star">*</span></label>
                         <label class="check"><input type="checkbox" name="fleetPipeline" [(ngModel)]="p.fleetPipeline" /> Pipeline</label>
                         <label class="check"><input type="checkbox" name="fleetTruck" [(ngModel)]="p.fleetTruck" /> Cryogenic trucks</label>
                         <label class="check"><input type="checkbox" name="fleetRail" [(ngModel)]="p.fleetRail" /> Rail tankers</label>
+                        <app-field-error [msg]="fe()['fleet']" />
                       </div>
-                      <div class="field"><label>Capacity (t/day)</label><input type="number" name="capacityPerDay" [(ngModel)]="p.capacityPerDay" /></div>
-                      <div class="field"><label>Service radius (km)</label><input type="number" name="serviceRadiusKm" [(ngModel)]="p.serviceRadiusKm" /><span class="hint">You are notified about shipments loading within this radius.</span></div>
+                      <div class="field" [class.invalid]="fe()['capacityPerDay']"><label>Capacity (t/day) <span class="required-star">*</span></label><input type="number" name="capacityPerDay" [(ngModel)]="p.capacityPerDay" required [attr.aria-invalid]="fe()['capacityPerDay'] ? 'true' : null" /><app-field-error [msg]="fe()['capacityPerDay']" /></div>
+                      <div class="field" [class.invalid]="fe()['serviceRadiusKm']"><label>Service radius (km) <span class="required-star">*</span></label><input type="number" name="serviceRadiusKm" [(ngModel)]="p.serviceRadiusKm" required [attr.aria-invalid]="fe()['serviceRadiusKm'] ? 'true' : null" /><span class="hint">You are notified about shipments loading within this radius.</span><app-field-error [msg]="fe()['serviceRadiusKm']" /></div>
                     </div>
                   }
                   @case ('LAB') {
                     <div class="form-row">
-                      <div class="field"><label>Accreditation number (NABL)</label><input name="accreditationNumber" [(ngModel)]="p.accreditationNumber" /></div>
-                      <div class="field"><label>Tests offered</label><input name="testsOffered" [(ngModel)]="p.testsOffered" placeholder="GC purity, moisture, sulphur species…" /></div>
+                      <div class="field" [class.invalid]="fe()['accreditationNumber']"><label>Accreditation number (NABL) <span class="required-star">*</span></label><input name="accreditationNumber" [(ngModel)]="p.accreditationNumber" required [attr.aria-invalid]="fe()['accreditationNumber'] ? 'true' : null" /><app-field-error [msg]="fe()['accreditationNumber']" /></div>
+                      <div class="field" [class.invalid]="fe()['testsOffered']"><label>Tests offered <span class="required-star">*</span></label><input name="testsOffered" [(ngModel)]="p.testsOffered" placeholder="GC purity, moisture, sulphur species…" required [attr.aria-invalid]="fe()['testsOffered'] ? 'true' : null" /><app-field-error [msg]="fe()['testsOffered']" /></div>
                     </div>
                   }
                   @case ('REGULATOR') {
                     <div class="form-row">
-                      <div class="field"><label>Agency</label><input name="agency" [(ngModel)]="p.agency" placeholder="e.g. NITI Aayog CCUS cell" /></div>
-                      <div class="field"><label>Jurisdiction</label><input name="jurisdiction" [(ngModel)]="p.jurisdiction" placeholder="National / State" /></div>
+                      <div class="field" [class.invalid]="fe()['agency']"><label>Agency <span class="required-star">*</span></label><input name="agency" [(ngModel)]="p.agency" placeholder="e.g. NITI Aayog CCUS cell" required [attr.aria-invalid]="fe()['agency'] ? 'true' : null" /><app-field-error [msg]="fe()['agency']" /></div>
+                      <div class="field" [class.invalid]="fe()['jurisdiction']"><label>Jurisdiction <span class="required-star">*</span></label><input name="jurisdiction" [(ngModel)]="p.jurisdiction" placeholder="National / State" required [attr.aria-invalid]="fe()['jurisdiction'] ? 'true' : null" /><app-field-error [msg]="fe()['jurisdiction']" /></div>
                     </div>
                   }
                 }
@@ -327,18 +320,16 @@ const LAST_STEP = 4;
               <!-- ===== STEP 4 — location & review ===== -->
               @if (step() === 4) {
                 <div class="form-row">
-                  <div class="field wide"><label>Street address</label><input name="address" [(ngModel)]="f.address" autocomplete="street-address" /></div>
+                  <div class="field wide" [class.invalid]="fe()['address']"><label>Street address <span class="required-star">*</span></label><input name="address" [(ngModel)]="f.address" autocomplete="street-address" required [attr.aria-invalid]="fe()['address'] ? 'true' : null" /><app-field-error [msg]="fe()['address']" /></div>
                 </div>
                 <div class="form-row">
-                  <div class="field"><label>City</label><input name="city" [(ngModel)]="f.city" autocomplete="address-level2" /></div>
-                  <div class="field"><label>State</label>
-                    <select name="state" [(ngModel)]="f.state">@for (s of states; track s) {<option [value]="s">{{ s }}</option>}</select>
-                  </div>
-                  <div class="field"><label>Country</label><input name="country" [(ngModel)]="f.country" autocomplete="country-name" /></div>
+                  <div class="field" [class.invalid]="fe()['city']"><label>City <span class="required-star">*</span></label><input name="city" [(ngModel)]="f.city" autocomplete="address-level2" required [attr.aria-invalid]="fe()['city'] ? 'true' : null" /><app-field-error [msg]="fe()['city']" /></div>
+                  <div class="field" [class.invalid]="fe()['state']"><label>State <span class="required-star">*</span></label><select name="state" [(ngModel)]="f.state" required [attr.aria-invalid]="fe()['state'] ? 'true' : null">@for (s of states; track s) {<option [value]="s">{{ s }}</option>}</select><app-field-error [msg]="fe()['state']" /></div>
+                  <div class="field" [class.invalid]="fe()['country']"><label>Country <span class="required-star">*</span></label><input name="country" [(ngModel)]="f.country" autocomplete="country-name" required [attr.aria-invalid]="fe()['country'] ? 'true' : null" /><app-field-error [msg]="fe()['country']" /></div>
                 </div>
                 <div class="form-row">
-                  <div class="field"><label>Latitude</label><input type="number" step="0.0001" name="latitude" [(ngModel)]="f.latitude" /></div>
-                  <div class="field"><label>Longitude</label><input type="number" step="0.0001" name="longitude" [(ngModel)]="f.longitude" /></div>
+                  <div class="field" [class.invalid]="fe()['latitude']"><label>Latitude <span class="required-star">*</span></label><input type="number" step="0.0001" name="latitude" [(ngModel)]="f.latitude" required [attr.aria-invalid]="fe()['latitude'] ? 'true' : null" /><app-field-error [msg]="fe()['latitude']" /></div>
+                  <div class="field" [class.invalid]="fe()['longitude']"><label>Longitude <span class="required-star">*</span></label><input type="number" step="0.0001" name="longitude" [(ngModel)]="f.longitude" required [attr.aria-invalid]="fe()['longitude'] ? 'true' : null" /><app-field-error [msg]="fe()['longitude']" /></div>
                 </div>
                 <p class="hint">Coordinates drive distance, transport cost and the 100 km radius used to notify transport providers, so please keep them accurate.</p>
 
@@ -410,11 +401,11 @@ export class Register {
 
   step = signal(1);
   /**
-   * Errors are surfaced only after the user tries to advance, so the form is not hostile on first
-   * sight. Held in a signal rather than derived: the form fields are plain properties bound with
+   * Per-field messages, surfaced only after the user tries to advance so the form is not hostile on
+   * first sight. Held in a signal rather than derived: the fields are plain properties bound with
    * ngModel, not signals, so a computed() would never re-run when they change.
    */
-  errorsToShow = signal<string[]>([]);
+  fe = signal<FieldErrors>({});
   role = signal<Role | null>(null);
   busy = signal(false);
   done = signal(false);
@@ -450,7 +441,7 @@ export class Register {
     this.f.sector = (SECTORS_BY_ROLE[r] ?? [])[0] ?? '';
     // Role-specific answers from a previously chosen role no longer apply.
     this.p = r === 'TRANSPORT' ? { fleetPipeline: false, fleetTruck: true, fleetRail: false } : {};
-    this.errorsToShow.set([]);
+    this.fe.set({});
   }
 
   /** Only the keys that belong to the chosen role, so the stored profile carries no stray fields. */
@@ -466,79 +457,83 @@ export class Register {
     }
   }
 
-  /** Validates the step currently on screen. Plain method, evaluated fresh on every attempt. */
-  private validate(): string[] {
+  /**
+   * Validates the step currently on screen, returning one message per offending field.
+   * A plain method, evaluated fresh on every attempt: the fields are ordinary properties bound
+   * with ngModel, so nothing here would re-run on its own.
+   */
+  private validate(): Check {
+    const c = new Check();
     const s = this.step();
     const role = this.role();
-    const e: string[] = [];
-    const blank = (v: unknown) => !String(v ?? '').trim();
+    const f = this.f;
+    const p = this.p;
 
     if (s === 1) {
-      if (blank(this.f.companyName)) e.push('Company name is required.');
-      if (blank(this.f.fullName)) e.push('Your full name is required.');
-      if (!EMAIL_RE.test(this.f.email.trim())) e.push('Enter a valid email address.');
-      if (this.f.password.length < 8) e.push('Password must be at least 8 characters.');
-      if (this.f.contactPhone.replace(/\D/g, '').length < 10) e.push('Enter a phone number with at least 10 digits.');
+      c.required('companyName', f.companyName, 'Company name');
+      c.required('fullName', f.fullName, 'Your full name');
+      c.email('email', f.email);
+      c.when(isBlank(f.password), 'password', 'Password is required.');
+      c.when(!isBlank(f.password) && f.password.length < 8, 'password', 'Password must be at least 8 characters.');
+      c.when(isBlank(f.contactPhone), 'contactPhone', 'Phone is required.');
+      c.when(!isBlank(f.contactPhone) && f.contactPhone.replace(/\D/g, '').length < 10, 'contactPhone',
+        'Enter a phone number with at least 10 digits.');
     }
 
-    if (s === 2) {
-      if (!role) e.push('Choose the role that describes your organisation.');
-    }
+    // Step 2 needs no check here: Next stays disabled until a role is chosen.
 
     if (s === 3) {
-      if (blank(this.f.sector)) e.push('Select a sector.');
-      if (blank(this.f.registrationNumber)) e.push('Registration number (CIN / GST) is required.');
-      const pos = (v: unknown, label: string) => { if (v === undefined || v === null || Number(v) <= 0) e.push(`${label} must be greater than zero.`); };
+      c.required('sector', f.sector, 'Sector');
+      c.required('registrationNumber', f.registrationNumber, 'Registration number (CIN / GST)');
       switch (role) {
         case 'EMITTER':
-          if (blank(this.p.captureTechnology)) e.push('Capture technology is required.');
-          pos(this.p.annualCaptureCapacity, 'Annual capture capacity');
-          if (blank(this.p.emissionSource)) e.push('Emission source is required.');
+          c.required('captureTechnology', p.captureTechnology, 'Capture technology');
+          c.num('annualCaptureCapacity', p.annualCaptureCapacity, 'Annual capture capacity', { gt: 0, unit: ' t/yr' });
+          c.required('emissionSource', p.emissionSource, 'Emission source');
           break;
         case 'UTILIZER':
-          if (blank(this.p.useCase)) e.push('Use case is required.');
-          pos(this.p.annualDemand, 'Annual CO₂ demand');
-          if (this.p.requiredPurity === undefined || Number(this.p.requiredPurity) <= 0 || Number(this.p.requiredPurity) > 100) e.push('Required purity must be between 0 and 100%.');
+          c.required('useCase', p.useCase, 'Use case');
+          c.num('annualDemand', p.annualDemand, 'Annual CO\u2082 demand', { gt: 0, unit: ' t/yr' });
+          c.num('requiredPurity', p.requiredPurity, 'Required purity', { gt: 0, max: 100, unit: '%' });
           break;
         case 'TRANSPORT':
-          if (!this.p.fleetPipeline && !this.p.fleetTruck && !this.p.fleetRail) e.push('Select at least one fleet type.');
-          pos(this.p.capacityPerDay, 'Capacity per day');
-          pos(this.p.serviceRadiusKm, 'Service radius');
+          c.when(!p.fleetPipeline && !p.fleetTruck && !p.fleetRail, 'fleet', 'Select at least one fleet type.');
+          c.num('capacityPerDay', p.capacityPerDay, 'Capacity', { gt: 0, unit: ' t/day' });
+          c.num('serviceRadiusKm', p.serviceRadiusKm, 'Service radius', { gt: 0, unit: ' km' });
           break;
         case 'LAB':
-          if (blank(this.p.accreditationNumber)) e.push('Accreditation number is required.');
-          if (blank(this.p.testsOffered)) e.push('List at least one test you offer.');
+          c.required('accreditationNumber', p.accreditationNumber, 'Accreditation number');
+          c.when(isBlank(p.testsOffered), 'testsOffered', 'List at least one test you offer.');
           break;
         case 'REGULATOR':
-          if (blank(this.p.agency)) e.push('Agency is required.');
-          if (blank(this.p.jurisdiction)) e.push('Jurisdiction is required.');
+          c.required('agency', p.agency, 'Agency');
+          c.required('jurisdiction', p.jurisdiction, 'Jurisdiction');
           break;
       }
     }
 
     if (s === 4) {
-      if (blank(this.f.address)) e.push('Street address is required.');
-      if (blank(this.f.city)) e.push('City is required.');
-      if (blank(this.f.state)) e.push('State is required.');
-      if (blank(this.f.country)) e.push('Country is required.');
-      const lat = Number(this.f.latitude), lng = Number(this.f.longitude);
-      if (!Number.isFinite(lat) || lat < -90 || lat > 90) e.push('Latitude must be between -90 and 90.');
-      if (!Number.isFinite(lng) || lng < -180 || lng > 180) e.push('Longitude must be between -180 and 180.');
+      c.required('address', f.address, 'Street address');
+      c.required('city', f.city, 'City');
+      c.required('state', f.state, 'State');
+      c.required('country', f.country, 'Country');
+      c.num('latitude', f.latitude, 'Latitude', { min: -90, max: 90 });
+      c.num('longitude', f.longitude, 'Longitude', { min: -180, max: 180 });
     }
-    return e;
+    return c;
   }
 
   next(): void {
-    const errors = this.validate();
-    if (errors.length) { this.errorsToShow.set(errors); return; }
-    this.errorsToShow.set([]);
+    const c = this.validate();
+    if (!c.ok) { this.fe.set(c.errors); scrollToFirstInvalid(); return; }
+    this.fe.set({});
     this.error.set(null);
     this.step.update((s) => Math.min(LAST_STEP, s + 1));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   back(): void {
-    this.errorsToShow.set([]);
+    this.fe.set({});
     this.error.set(null);
     this.step.update((s) => Math.max(1, s - 1));
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -546,10 +541,12 @@ export class Register {
 
   onSubmit(): void {
     if (this.step() < LAST_STEP) { this.next(); return; }
-    const errors = this.validate();
-    if (errors.length) { this.errorsToShow.set(errors); return; }
+    const c = this.validate();
+    if (!c.ok) { this.fe.set(c.errors); scrollToFirstInvalid(); return; }
+    this.fe.set({});
     const role = this.role();
-    if (!role) { this.step.set(2); this.errorsToShow.set(['Choose the role that describes your organisation.']); return; }
+    // Cannot happen through the UI, since step 2 will not advance without one.
+    if (!role) { this.step.set(2); return; }
 
     this.busy.set(true); this.error.set(null);
     const req: RegisterRequest = {
