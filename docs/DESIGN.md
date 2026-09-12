@@ -187,7 +187,8 @@ Config: GET /meta/rates (any) → the rate tables + weight tables used by the fo
 - **Extra endpoint.** `GET /api/audit/verify` recomputes the hash chain and reports whether it is intact. Useful in the demo to show the audit log is tamper-evident.
 - **Reserved word.** `notifications.read` is stored as column `is_read`; the entity property and the DTO field are both still `read`.
 - **JSON columns.** Mapped as `Map`/`List` through attribute converters over text/jsonb, so the one migration runs unchanged on PostgreSQL and on H2 in PostgreSQL mode.
-- **Not yet run against real PostgreSQL.** The Docker daemon was unavailable on the build machine, so every verification ran on the `h2` profile. The migration uses only portable SQL and JSON binding relies on `?stringtype=unspecified`.
+- **Audit hashing is canonical.** The chain digest covers a canonical rendering of `details` (object keys sorted, numbers normalised) rather than the raw serialisation. PostgreSQL's jsonb reorders keys and reformats numbers on read, so hashing the raw JSON reported a false tamper on every event with a non-trivial payload. Verified on PostgreSQL: chain intact across the seed, and editing one row's `details` directly in the database is still detected and names the exact row.
+- **Verified on real PostgreSQL 16.** Migration applies, all ten jsonb columns are genuinely `jsonb`, the seed loads, the 29-check smoke suite and the browser sweep pass, and six concurrent 100 t allocations against 150 t of free volume produced exactly one 201 and five 409s with no overselling.
 
 ## Frontend routes (role-guarded; layout with sidebar per role, notification bell with unread count)
 / (public landing: impact counter + anonymized listings + "how matching works" explanation), /login, /register (role picker → role-specific fields)

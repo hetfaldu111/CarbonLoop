@@ -48,7 +48,7 @@ public class AuditService {
             e.setDetails(details == null ? new LinkedHashMap<>() : new LinkedHashMap<>(details));
             String prev = repo.findTopByOrderByIdDesc().map(AuditEvent::getHash).orElse("GENESIS");
             e.setPreviousHash(prev);
-            e.setHash(sha256(prev + "|" + e.getOccurredAt() + "|" + action + "|" + entityType + "|" + e.getEntityId() + "|" + Json.write(e.getDetails())));
+            e.setHash(hashOf(prev, e));
             return repo.saveAndFlush(e);
         }
     }
@@ -58,11 +58,58 @@ public class AuditService {
     public Long verifyChain() {
         String prev = "GENESIS";
         for (AuditEvent e : repo.findAll(org.springframework.data.domain.Sort.by("id"))) {
-            String expected = sha256(prev + "|" + e.getOccurredAt() + "|" + e.getAction() + "|" + e.getEntityType() + "|" + e.getEntityId() + "|" + Json.write(e.getDetails()));
-            if (!expected.equals(e.getHash()) || !prev.equals(e.getPreviousHash())) return e.getId();
+            if (!hashOf(prev, e).equals(e.getHash()) || !prev.equals(e.getPreviousHash())) return e.getId();
             prev = e.getHash();
         }
         return null;
+    }
+
+    private static String hashOf(String previousHash, AuditEvent e) {
+        return sha256(previousHash + "|" + e.getOccurredAt() + "|" + e.getAction() + "|" + e.getEntityType()
+                + "|" + e.getEntityId() + "|" + canonical(e.getDetails()));
+    }
+
+    /**
+     * Order- and format-independent rendering of the details payload, used only for hashing.
+     * PostgreSQL stores details as jsonb, which reorders object keys and normalises numeric
+     * literals on the way back out, so hashing the raw serialisation would report a false
+     * tamper on every read. Sorting keys and normalising numbers makes the digest depend on
+     * the content alone, so it matches whether the column is jsonb or plain text.
+     */
+    static String canonical(Object value) {
+        StringBuilder sb = new StringBuilder();
+        canonical(value, sb);
+        return sb.toString();
+    }
+
+    private static void canonical(Object value, StringBuilder sb) {
+        switch (value) {
+            case null -> sb.append("null");
+            case Map<?, ?> map -> {
+                sb.append('{');
+                boolean first = true;
+                for (String key : new java.util.TreeSet<>(map.keySet().stream().map(String::valueOf).toList())) {
+                    if (!first) sb.append(',');
+                    first = false;
+                    sb.append(Json.write(key)).append(':');
+                    canonical(map.get(key), sb);
+                }
+                sb.append('}');
+            }
+            case Iterable<?> list -> {
+                sb.append('[');
+                boolean first = true;
+                for (Object item : list) {
+                    if (!first) sb.append(',');
+                    first = false;
+                    canonical(item, sb);
+                }
+                sb.append(']');
+            }
+            case Number n -> sb.append(new java.math.BigDecimal(n.toString()).stripTrailingZeros().toPlainString());
+            case Boolean b -> sb.append(b);
+            default -> sb.append(Json.write(String.valueOf(value)));
+        }
     }
 
     private static AuthUser currentActor() {
