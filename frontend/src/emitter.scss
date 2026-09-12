@@ -767,4 +767,31 @@
     .em-row { flex-wrap: wrap; }
     .em-row .figs { text-align: left; }
   }
+
+  /* Shipment cards, per the design's ShipmentsPanel */
+  .em-ship-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+  .em-ship {
+    display: block; background: #fff; border-radius: 16px; border: 1px solid rgba(13, 35, 24, 0.08);
+    box-shadow: 0 2px 8px rgba(13, 35, 24, 0.05); overflow: hidden; color: inherit; text-decoration: none;
+    transition: box-shadow 0.15s ease, transform 0.15s ease;
+  }
+  .em-ship:hover { text-decoration: none; transform: translateY(-2px); box-shadow: 0 8px 22px rgba(13, 35, 24, 0.1); }
+  .em-ship.bad { border-color: rgba(239, 68, 68, 0.25); }
+  .em-ship .stripe { display: block; height: 4px; }
+  .em-ship .body { display: block; padding: 16px 18px; }
+  .em-ship .head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+  .em-ship .who { display: block; min-width: 0; }
+  .em-ship .nm { display: block; font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 700; color: #0d2318; margin-bottom: 2px; }
+  .em-ship .id { display: block; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: rgba(13, 35, 24, 0.4); }
+  .em-ship .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 12px; margin-bottom: 10px; }
+  .em-ship .stats .l { display: block; font-family: 'JetBrains Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em; color: rgba(13, 35, 24, 0.35); margin-bottom: 2px; }
+  .em-ship .stats .v { display: block; font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 600; color: #0d2318; }
+  .em-ship .carrier { display: block; font-family: 'Outfit', sans-serif; font-size: 12px; color: rgba(13, 35, 24, 0.5); margin-bottom: 12px; }
+  .em-ship .prog { display: block; }
+  .em-ship .prog-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
+  .em-ship .prog-top .l { font-family: 'JetBrains Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em; color: rgba(13, 35, 24, 0.35); }
+  .em-ship .prog-top .pc { font-family: 'Outfit', sans-serif; font-size: 11px; font-weight: 600; }
+  .em-ship .bar { display: block; height: 8px; border-radius: 99px; background: rgba(13, 35, 24, 0.08); overflow: hidden; }
+  .em-ship .bar .fill { display: block; height: 100%; border-radius: 99px; }
+  .em-ship .flags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
 }
