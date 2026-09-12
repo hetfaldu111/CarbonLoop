@@ -61,8 +61,13 @@ AUTH_TRANS=(-H "Authorization: Bearer $TRANS")
 
 echo
 echo "== Pending-approval account must not log in =="
-c 'pending\|403' 'login newco@carbon.local is refused' -X POST "$BASE/api/auth/login" \
-  -H 'Content-Type: application/json' -d '{"email":"newco@carbon.local","password":"Password123!"}'
+# Register a throwaway company rather than relying on the seeded newco@carbon.local,
+# whose status legitimately changes as soon as anyone runs the admin approval demo.
+PENDING_EMAIL="smoke-pending-$$-$(date +%s)@carbon.local"
+curl -s -o /dev/null -X POST "$BASE/api/auth/register" -H 'Content-Type: application/json' \
+  -d "{\"role\":\"UTILIZER\",\"companyName\":\"Smoke Pending $$\",\"email\":\"$PENDING_EMAIL\",\"password\":\"Password123!\",\"fullName\":\"Smoke Test\",\"contactPhone\":\"9000000000\",\"address\":\"1 Test Rd\",\"city\":\"Surat\",\"state\":\"Gujarat\",\"country\":\"India\",\"latitude\":21.17,\"longitude\":72.83,\"sector\":\"ALGAE\",\"registrationNumber\":\"SMOKE-$$\",\"roleProfile\":{}}"
+c 'pending\|403' 'a freshly registered company cannot log in before approval' -X POST "$BASE/api/auth/login" \
+  -H 'Content-Type: application/json' -d "{\"email\":\"$PENDING_EMAIL\",\"password\":\"Password123!\"}"
 
 echo
 echo "== Admin =="
