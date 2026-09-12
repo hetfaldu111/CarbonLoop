@@ -303,6 +303,72 @@ public class DataSeeder implements CommandLineRunner {
                 String.format("35 t of GASEOUS CO2 by TRUCK, Angul steel plant, Odisha → Paradip (%.0f km). Estimated ₹%.0f. Accept or reject.", dist, s2.getTransportCost()), "Shipment", SHIP_REQUESTED);
         audit.record(STEEL, Role.EMITTER, "SHIPMENT_REQUESTED", "Shipment", SHIP_REQUESTED, AuditService.details("agreement", A_L4_ALGAE, "volumeTonnes", 35, "mode", "TRUCK", "providersNotified", 1));
 
+        // ---- Gujarat lane: work for Saurashtra Cryo Logistics -------------------------------
+        // (transportOffer(...) helper is defined at the bottom of this class)
+        // Without these the second carrier signs in to an empty portal, and the reconciliation
+        // flags never appear anywhere in the seed.
+        double gujDist = GeoUtil.distanceKm(22.84, 69.72, 21.70, 72.57);   // Mundra → Dahej
+        double gujHop = GeoUtil.distanceKm(22.84, 69.72, 22.47, 70.06);    // Mundra → Jamnagar depot
+
+        // In transit right now: loaded and sealed, not yet delivered.
+        Shipment s3 = new Shipment();
+        s3.setId(id(5003)); s3.setAgreementId(A_CONTRACT); s3.setTransportProviderId(GUJTRANS); s3.setOwnTransport(false);
+        s3.setTransportMode(TransportMode.TRUCK); s3.setDistanceKm(gujDist); s3.setVolumeTonnes(40);
+        s3.setOriginLat(22.84); s3.setOriginLng(69.72); s3.setDestLat(21.70); s3.setDestLng(72.57);
+        s3.setSealNumber("SEAL-8420"); s3.setLoadedWeightTonnes(40.0); s3.setLoadMeterReading(88120.0);
+        s3.setLoadSamplePurityPct(98.2); s3.setLoadedAt(now.minus(2, ChronoUnit.DAYS));
+        s3.setStatus(ShipmentStatus.IN_TRANSIT);
+        s3.setTransportCost(gujDist * 40 * 4.0 + 5000); s3.setCreatedAt(now.minus(3, ChronoUnit.DAYS));
+        shipments.save(s3);
+        transportOffer(id(5103), id(5003), GUJTRANS, TransportOfferStatus.ACCEPTED, gujHop, s3.getTransportCost(), now.minus(3, ChronoUnit.DAYS));
+        audit.record(POWER, Role.EMITTER, "SHIPMENT_REQUESTED", "Shipment", id(5003), AuditService.details("agreement", A_CONTRACT, "volumeTonnes", 40, "mode", "TRUCK"));
+        audit.record(GUJTRANS, Role.TRANSPORT, "TRANSPORT_ACCEPTED", "Shipment", id(5003), AuditService.details("provider", GUJTRANS));
+        audit.record(POWER, Role.EMITTER, "SHIPMENT_LOADED", "Shipment", id(5003), AuditService.details("seal", "SEAL-8420", "loadedWeightTonnes", 40.0));
+
+        // Delivered but flagged: the delivery seal does not match and 1.8 t went missing.
+        // Flags come from the real rules, not a hardcoded list.
+        Shipment s4 = new Shipment();
+        s4.setId(id(5004)); s4.setAgreementId(A_CONTRACT); s4.setTransportProviderId(GUJTRANS); s4.setOwnTransport(false);
+        s4.setTransportMode(TransportMode.TRUCK); s4.setDistanceKm(gujDist); s4.setVolumeTonnes(40);
+        s4.setOriginLat(22.84); s4.setOriginLng(69.72); s4.setDestLat(21.70); s4.setDestLng(72.57);
+        s4.setSealNumber("SEAL-8310"); s4.setLoadedWeightTonnes(40.0); s4.setLoadMeterReading(87680.0);
+        s4.setLoadSamplePurityPct(98.2); s4.setLoadedAt(now.minus(13, ChronoUnit.DAYS));
+        s4.setDeliverySealNumber("SEAL-8317"); s4.setDeliveredWeightTonnes(38.2); s4.setDeliveryMeterReading(87720.0);
+        s4.setDeliverySamplePurityPct(98.1); s4.setDeliveredAt(now.minus(12, ChronoUnit.DAYS));
+        s4.setFlags(ReconciliationRules.evaluate(new ReconciliationRules.Input(
+                "SEAL-8310", "SEAL-8317", 40.0, 38.2, 98.2, 98.1, 87680.0, 87720.0, 2.0)));
+        s4.setStatus(s4.getFlags().isEmpty() ? ShipmentStatus.DELIVERED : ShipmentStatus.FLAGGED);
+        s4.setTransportCost(gujDist * 40 * 4.0 + 5000); s4.setCreatedAt(now.minus(14, ChronoUnit.DAYS));
+        shipments.save(s4);
+        transportOffer(id(5104), id(5004), GUJTRANS, TransportOfferStatus.ACCEPTED, gujHop, s4.getTransportCost(), now.minus(14, ChronoUnit.DAYS));
+        audit.record(GUJTRANS, Role.TRANSPORT, "TRANSPORT_ACCEPTED", "Shipment", id(5004), AuditService.details("provider", GUJTRANS));
+        audit.record(METHANOL, Role.UTILIZER, "SHIPMENT_FLAGGED", "Shipment", id(5004),
+                AuditService.details("deliverySeal", "SEAL-8317", "deliveredWeightTonnes", 38.2, "flags", s4.getFlags()));
+        notifications.notify(POWER, "SHIPMENT_FLAGGED", "Shipment flagged on delivery",
+                "SEAL-8310 left Mundra but SEAL-8317 arrived at Dahej, and 1.8 t of 40 t is unaccounted for. Reconciliation failed on seal and weight.", "Shipment", id(5004));
+        notifications.notify(GUJTRANS, "SHIPMENT_FLAGGED", "Your delivery was flagged",
+                "Seal mismatch and a 4.5% weight gap on the Mundra → Dahej run. The lab has been notified.", "Shipment", id(5004));
+
+        // Waiting for a carrier: both Gujarat-side providers were notified.
+        Shipment s5 = new Shipment();
+        s5.setId(id(5005)); s5.setAgreementId(A_CONTRACT); s5.setOwnTransport(false); s5.setTransportMode(TransportMode.RAIL);
+        s5.setStatus(ShipmentStatus.REQUESTED); s5.setDistanceKm(gujDist); s5.setVolumeTonnes(40);
+        s5.setOriginLat(22.84); s5.setOriginLng(69.72); s5.setDestLat(21.70); s5.setDestLng(72.57);
+        s5.setTransportCost(gujDist * 40 * 2.5 + 15000); s5.setCreatedAt(now.minus(6, ChronoUnit.HOURS));
+        shipments.save(s5);
+        transportOffer(id(5105), id(5005), GUJTRANS, TransportOfferStatus.NOTIFIED, gujHop, null, now.minus(6, ChronoUnit.HOURS));
+        transportOffer(id(5106), id(5005), ODTRANS, TransportOfferStatus.NOTIFIED,
+                GeoUtil.distanceKm(22.84, 69.72, 20.46, 85.88), null, now.minus(6, ChronoUnit.HOURS));
+        notifications.notify(GUJTRANS, "TRANSPORT_REQUEST", "Shipment request near you",
+                String.format("40 t of LIQUEFIED CO2 by RAIL, Mundra → Dahej (%.0f km). Estimated ₹%.0f. Accept or reject.", gujDist, s5.getTransportCost()), "Shipment", id(5005));
+        audit.record(POWER, Role.EMITTER, "SHIPMENT_REQUESTED", "Shipment", id(5005),
+                AuditService.details("agreement", A_CONTRACT, "volumeTonnes", 40, "mode", "RAIL", "providersNotified", 2));
+
+        // A job this carrier turned down, so the portal shows more than one outcome.
+        transportOffer(id(5107), SHIP_REQUESTED, GUJTRANS, TransportOfferStatus.REJECTED,
+                GeoUtil.distanceKm(20.84, 85.10, 22.47, 70.06), null, now.minus(1, ChronoUnit.DAYS));
+
+
         // ---- Forecast shortfall on 344 (contract with methanol is active) ----
         OutputForecast f = new OutputForecast();
         f.setId(id(7001)); f.setPassportId(P344); f.setPeriodStart(today.plusMonths(1)); f.setPeriodEnd(today.plusMonths(1).plusDays(10));
@@ -455,5 +521,18 @@ public class DataSeeder implements CommandLineRunner {
         o.setDurationMonths(months); o.setPricingStructure(ps); o.setTakeOrPay(top); o.setSupplyGapThresholdPct(gap); o.setDepositPct(deposit); o.setMessage(msg);
         o.setStatus(status); o.setCreatedAt(created);
         return offers.save(o);
+    }
+    /** One seeded carrier offer. Quote is null while the job is still only advertised. */
+    private void transportOffer(UUID id, UUID shipmentId, UUID providerId, TransportOfferStatus status,
+                                double distanceFromOriginKm, Double quotedPrice, Instant createdAt) {
+        TransportOffer o = new TransportOffer();
+        o.setId(id);
+        o.setShipmentId(shipmentId);
+        o.setProviderId(providerId);
+        o.setStatus(status);
+        o.setDistanceFromOriginKm(distanceFromOriginKm);
+        o.setQuotedPrice(quotedPrice);
+        o.setCreatedAt(createdAt);
+        transportOffers.save(o);
     }
 }
