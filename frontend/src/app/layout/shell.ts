@@ -55,8 +55,8 @@ const NAV: Record<Role, NavItem[]> = {
     { label: 'Shipments', link: '/utilizer/shipments', icon: 'shipment' },
   ],
   TRANSPORT: [
-    { label: 'Offers', link: '/transport', icon: '✉', exact: true },
-    { label: 'My shipments', link: '/transport/shipments', icon: '⛟' },
+    { label: 'Offers', link: '/transport', icon: 'proposal', exact: true },
+    { label: 'My shipments', link: '/transport/shipments', icon: 'shipment' },
   ],
   LAB: [
     { label: 'Queue', link: '/lab', icon: '☰', exact: true },
@@ -150,8 +150,8 @@ export class Shell {
   home = computed(() => this.auth.homeFor(this.role()));
   tier = signal<Tier | null>(null);
   basis = signal<string | null>(null);
-  /** Emitter and utilizer share the dark trading-portal shell; the other roles keep the light one. */
-  portalDesign = this.auth.hasRole('EMITTER', 'UTILIZER');
+  /** The three trading roles share the dark portal shell; admin, lab and regulator keep the light one. */
+  portalDesign = this.auth.hasRole('EMITTER', 'UTILIZER', 'TRANSPORT');
 
   /** Wraps a thin-line glyph path in an SVG. Paths are our own constants, never user input. */
   iconFor(key: string): SafeHtml {

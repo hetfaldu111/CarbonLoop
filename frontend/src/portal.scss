@@ -1193,3 +1193,54 @@ a.em-kpi:hover { text-decoration: none; }
     .up-dates { margin-left: 0; width: 100%; }
   }
 }
+
+/* ============================================================
+   Transport portal — the offers page and its history table.
+   Scoped to `.shell.portal` so only the dark-shell roles pick
+   these up; admin, lab and regulator are untouched.
+   ============================================================ */
+.shell.portal .content {
+
+  .tp-stack { display: flex; flex-direction: column; gap: 12px; }
+
+  /* One open offer: description on the left, quote and actions on the right. */
+  .tp-offer {
+    display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap;
+    background: #fff; border: 1px solid rgba(0, 0, 0, 0.06); border-radius: 16px;
+    padding: 18px 22px; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  }
+  .tp-offer-main { min-width: 0; flex: 1 1 420px; }
+  .tp-offer-title {
+    display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+    font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 700; color: #0d2318;
+  }
+  .tp-pid { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; color: #22c55e; letter-spacing: 0.03em; }
+  .tp-offer-meta {
+    font-family: 'Outfit', sans-serif; font-size: 12px; line-height: 1.55;
+    color: rgba(13, 35, 24, 0.5); margin-top: 4px;
+  }
+  .tp-broadcast {
+    display: inline-block; margin-top: 8px; padding: 5px 12px; border-radius: 8px;
+    background: #fef3c7; color: #92400e; font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 600;
+  }
+
+  /* Quote box plus the two decisions. */
+  .tp-offer-act { display: flex; align-items: flex-start; gap: 10px; flex: 0 0 auto; flex-wrap: wrap; }
+  /* The global rule stretches inputs to 100%; pin the quote box to a sane width. */
+  .tp-offer-act .field input { width: 150px; }
+  .tp-offer-act .btn { white-space: nowrap; }
+
+  .tp-history { margin-top: 26px; }
+
+  /* Reconciliation flags read as codes, so keep them monospace and unmistakably red. */
+  .flag.flag-red {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.04em;
+    background: #fee2e2; color: #b91c1c; padding: 3px 8px; border-radius: 6px;
+  }
+
+  @media (max-width: 860px) {
+    .tp-offer { align-items: stretch; }
+    .tp-offer-act { width: 100%; }
+    .tp-offer-act .field, .tp-offer-act .field input { width: 100%; }
+  }
+}
