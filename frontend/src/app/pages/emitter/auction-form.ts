@@ -22,6 +22,10 @@ import { Check, FieldErrors, addDays, errMsg, isBlank, scrollToFirstInvalid, toD
       @else if (!passports().length) {<div class="alert alert-warn">You have no VERIFIED passports. A lab must issue a Certificate of Analysis before you can auction CO₂.</div>}
       @else {
       <form class="form nl-card" (ngSubmit)="submit()">
+        <div class="nl-cardhead">
+          <h3>New Spot Auction</h3>
+          <p>Schedule an auction date and time. Verified utilizers are notified when it is published.</p>
+        </div>
         <div class="nl-grid">
           <div class="nl-full">
             <div class="field"><label>CO₂ Passport</label>
@@ -40,12 +44,13 @@ import { Check, FieldErrors, addDays, errMsg, isBlank, scrollToFirstInvalid, toD
           <div class="field" [class.invalid]="fe()['basePricePerTonne']">
             <label>Opening price (₹ / t) <span class="required-star">*</span></label>
             <input type="number" name="basePricePerTonne" [(ngModel)]="f.basePricePerTonne" required [attr.aria-invalid]="fe()['basePricePerTonne'] ? 'true' : null" />
+            <span class="hint">Minimum price — bidding cannot go below this.</span>
             <app-field-error [msg]="fe()['basePricePerTonne']" />
           </div>
           <div class="field" [class.invalid]="fe()['bidIncrement']">
             <label>Increment per bid (₹ / t) <span class="required-star">*</span></label>
             <input type="number" step="1" name="bidIncrement" [(ngModel)]="f.bidIncrement" required [attr.aria-invalid]="fe()['bidIncrement'] ? 'true' : null" />
-            <span class="hint">Every bid raises the price by exactly this much.</span>
+            <span class="hint">Each new bid must exceed the current highest by exactly this much.</span>
             <app-field-error [msg]="fe()['bidIncrement']" />
           </div>
           <div class="field" [class.invalid]="fe()['minPurityPct']">
@@ -79,6 +84,16 @@ import { Check, FieldErrors, addDays, errMsg, isBlank, scrollToFirstInvalid, toD
           </div>
         </div>
 
+        <div class="em-sum">
+          <div class="em-mono-label">Auction summary</div>
+          <div class="em-sum-grid">
+            <div><div class="v">{{ f.volumeTonnes }} t</div><div class="l">Lot</div></div>
+            <div><div class="v">₹{{ f.basePricePerTonne }}/t</div><div class="l">Opening</div></div>
+            <div><div class="v">₹{{ f.bidIncrement }}/t</div><div class="l">Min raise</div></div>
+            <div><div class="v">{{ f.durationMinutes }} min</div><div class="l">Duration</div></div>
+            <div><div class="v">{{ startsLabel() }}</div><div class="l">Starts</div></div>
+          </div>
+        </div>
         <div class="alert alert-info">{{ summary() }}</div>
 
         <div class="field"><label>Description (public)</label><textarea name="description" [(ngModel)]="f.description" rows="3" placeholder="Delivery terms, special requirements… Company identity stays hidden until the auction closes."></textarea></div>
@@ -110,6 +125,11 @@ export class AuctionForm {
     deliveryWindowStart: toDateInput(addDays(new Date(), 14)), deliveryWindowEnd: toDateInput(addDays(new Date(), 104)),
     description: '',
   };
+
+  startsLabel(): string {
+    const d = new Date(this.f.scheduledStartAt);
+    return isNaN(d.getTime()) ? '—' : d.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+  }
 
   summary(): string {
     const start = new Date(this.f.scheduledStartAt);

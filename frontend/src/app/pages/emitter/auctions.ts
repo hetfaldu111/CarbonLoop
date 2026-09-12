@@ -1,21 +1,39 @@
 import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api.service';
 import { AuctionStateDto } from '../../core/models';
 import { StatusBadge, TierBadge } from '../../shared/badges';
 import { MoneyPipe, TonnesPipe } from '../../shared/pipes';
-import { Alert, EmptyState, Loading, PageHeader } from '../../shared/widgets';
+import { Alert, EmptyState, Loading } from '../../shared/widgets';
 import { errMsg } from '../../shared/utils';
 import { countdown } from '../shared/auction-room';
 
+const HOW = [
+  { step: '01', title: 'Schedule', desc: 'Set a date and time. Every verified utilizer is notified when the auction is published.' },
+  { step: '02', title: 'Utilizers bid', desc: 'Each bid raises the price by exactly the increment you set. Nobody can bid against themselves.' },
+  { step: '03', title: 'Live ladder', desc: 'You see the standing bid and full bid history in real time, with real company names.' },
+  { step: '04', title: 'Bid locks', desc: 'When the clock stops the last bid wins automatically and becomes a binding agreement.' },
+];
+
 @Component({
   selector: 'app-emitter-auctions',
-  imports: [DatePipe, RouterLink, StatusBadge, TierBadge, MoneyPipe, TonnesPipe, Alert, EmptyState, Loading, PageHeader],
+  imports: [DatePipe, FormsModule, RouterLink, StatusBadge, TierBadge, MoneyPipe, TonnesPipe, Alert, EmptyState, Loading],
   template: `
-    <app-page-header title="My auctions" subtitle="Live tracking of every lot you put up. Bidder names are shown in full because you are the seller.">
-      <a class="em-btn em-btn-green em-btn-sm" routerLink="/emitter/auctions/new">Schedule an auction</a>
-    </app-page-header>
+    <div class="em-ac-header">
+      <h1>Live Auctions</h1>
+      <div class="em-ac-tools">
+        <div class="em-search">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true">
+            <circle cx="7" cy="7" r="5" /><path d="M11 11l3.5 3.5" />
+          </svg>
+          <input [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Search auctions…" aria-label="Search auctions" />
+        </div>
+        <a class="em-btn em-btn-green" routerLink="/emitter/auctions/new">+ Create Auction</a>
+      </div>
+    </div>
+    <p class="em-ac-sub">Live tracking of every lot you put up. Bidder names are shown in full because you are the seller.</p>
     <app-alert [message]="error()" />
 
     @if (loading()) {<app-loading />}
@@ -127,18 +145,43 @@ import { countdown } from '../shared/auction-room';
           }</tbody>
         </table></div>
       }
+
+      <!-- how live auctions work, per the design -->
+      <div class="em-card pad em-how">
+        <div class="em-mono-label">How live auctions work</div>
+        <div class="em-how-grid">
+          @for (h of howItWorks; track h.step) {
+            <div class="em-how-item">
+              <span class="n">{{ h.step }}</span>
+              <div>
+                <div class="t">{{ h.title }}</div>
+                <div class="d">{{ h.desc }}</div>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
     }`,
 })
 export class EmitterAuctions implements OnDestroy {
+  howItWorks = HOW;
   private api = inject(ApiService);
   rows = signal<AuctionStateDto[]>([]);
   loading = signal(true);
   error = signal<string | null>(null);
   private poll?: ReturnType<typeof setInterval>;
 
-  live = computed(() => this.rows().filter((a) => a.status === 'LIVE'));
-  upcoming = computed(() => this.rows().filter((a) => a.status === 'SCHEDULED'));
-  ended = computed(() => this.rows().filter((a) => a.status !== 'LIVE' && a.status !== 'SCHEDULED'));
+  search = signal('');
+  /** Matches the design's search: passport code, status or lot size. */
+  private match = (a: AuctionStateDto): boolean => {
+    const q = this.search().trim().toLowerCase();
+    if (!q) return true;
+    return [a.passportCode, a.status, String(a.volumeTonnes), a.city, a.state]
+      .some((v) => (v ?? '').toString().toLowerCase().includes(q));
+  };
+  live = computed(() => this.rows().filter((a) => a.status === 'LIVE' && this.match(a)));
+  upcoming = computed(() => this.rows().filter((a) => a.status === 'SCHEDULED' && this.match(a)));
+  ended = computed(() => this.rows().filter((a) => a.status !== 'LIVE' && a.status !== 'SCHEDULED' && this.match(a)));
 
   ngOnInit(): void { this.load(true); this.poll = setInterval(() => this.load(false), 3000); }
   ngOnDestroy(): void { if (this.poll) clearInterval(this.poll); }

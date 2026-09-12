@@ -686,4 +686,35 @@
     .pf-rail li:not(:last-child)::before { display: none; }
     .pf-rail .rl-sub, .pf-rail-foot { display: none; }
   }
+
+  /* Live Auctions page header, search and the how-it-works panel */
+  .em-ac-header { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .em-ac-header h1 { font-family: 'Fraunces', serif; font-size: 30px; font-weight: 700; color: #0d2318; margin: 0; }
+  .em-ac-tools { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+  .em-ac-sub { font-family: 'Outfit', sans-serif; font-size: 13px; color: rgba(13, 35, 24, 0.5); margin: 4px 0 16px; }
+  .em-search { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 99px; background: #fff; border: 1px solid rgba(13, 35, 24, 0.1); color: rgba(13, 35, 24, 0.4); }
+  /* The base rule pins this icon absolutely; this variant lays the box out with flex,
+     so the positioning has to be undone or the icon sits on top of the placeholder. */
+  .em-search svg { flex: none; position: static; transform: none; }
+  .em-search input { border: none; background: transparent; outline: none; font-family: 'Outfit', sans-serif; font-size: 13px; color: #0d2318; width: 180px; padding: 0; }
+  .em-search input::placeholder { color: rgba(13, 35, 24, 0.35); }
+
+  .em-how { margin-top: 18px; }
+  .em-how-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; margin-top: 14px; }
+  .em-how-item { display: flex; gap: 12px; }
+  .em-how-item .n { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; color: #22c55e; flex: none; margin-top: 2px; }
+  .em-how-item .t { font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 600; color: #0d2318; }
+  .em-how-item .d { font-size: 11px; line-height: 1.45; color: rgba(13, 35, 24, 0.5); margin-top: 4px; }
+  @media (max-width: 1000px) { .em-how-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 620px) { .em-how-grid { grid-template-columns: 1fr; } }
+
+  /* Auction form: card sub-heading and the summary strip */
+  .nl-cardhead { border-bottom: 1px solid rgba(13, 35, 24, 0.07); padding-bottom: 14px; }
+  .nl-cardhead h3 { font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 700; color: #0d2318; margin: 0; }
+  .nl-cardhead p { font-family: 'Outfit', sans-serif; font-size: 13px; color: rgba(13, 35, 24, 0.45); margin: 3px 0 0; }
+  .em-sum { padding: 16px; border-radius: 12px; background: rgba(13, 35, 24, 0.03); border: 1px solid rgba(13, 35, 24, 0.07); }
+  .em-sum-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; margin-top: 12px; }
+  .em-sum-grid .v { font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 700; color: #0d2318; }
+  .em-sum-grid .l { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: rgba(13, 35, 24, 0.4); margin-top: 2px; }
+  @media (max-width: 760px) { .em-sum-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 }
