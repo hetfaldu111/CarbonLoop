@@ -1,0 +1,35 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: carbon-marketplace
+  datasource:
+    url: jdbc:postgresql://localhost:5432/carbonmarket?stringtype=unspecified
+    username: carbon
+    password: carbon
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+    placeholders:
+      json: jsonb
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+
+app:
+  seed: true
+  jwt-secret: carbon-marketplace-dev-secret-key-please-change-in-production-0123456789abcdef
+  jwt-expiry-hours: 24
+  platform-fee-pct: 0
+
+logging:
+  level:
+    org.flywaydb: info
