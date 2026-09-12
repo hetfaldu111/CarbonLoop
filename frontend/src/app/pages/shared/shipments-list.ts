@@ -15,7 +15,7 @@ import { errMsg } from '../../shared/utils';
   imports: [DatePipe, DecimalPipe, FormsModule, RouterLink, StatusBadge, LabelPipe, TonnesPipe, Alert, EmptyState, Loading, PageHeader],
   template: `
     <!-- The emitter portal uses the design's cards; other roles keep the table. -->
-    @if (isEmitter) {
+    @if (portalDesign) {
       <div class="em-ac-header">
         <h1>Shipments</h1>
         <div class="em-ac-tools">
@@ -35,7 +35,7 @@ import { errMsg } from '../../shared/utils';
     <app-alert [message]="error()" />
     @if (loading()) {<app-loading />}
     @else if (!filtered().length) {<app-empty-state message="No shipments yet. Request one from an active agreement." icon="⛟" />}
-    @else if (isEmitter) {
+    @else if (portalDesign) {
       <div class="em-stack">
         @for (s of filtered(); track s.id) {
           <a class="em-trk" [class.bad]="isFlagged(s)" [routerLink]="['/shipments', s.id]">
@@ -124,6 +124,8 @@ export class ShipmentsList {
   private api = inject(ApiService);
   private auth = inject(AuthService);
   isEmitter = this.auth.hasRole('EMITTER');
+  /** Emitter and utilizer share the dark trading design. */
+  portalDesign = this.auth.hasRole('EMITTER', 'UTILIZER');
   rows = signal<ShipmentDto[]>([]);
   loading = signal(true);
   error = signal<string | null>(null);

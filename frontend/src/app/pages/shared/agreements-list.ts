@@ -14,8 +14,8 @@ import { errMsg } from '../../shared/utils';
   selector: 'app-agreements-list',
   imports: [DatePipe, FormsModule, RouterLink, StatusBadge, MoneyPipe, TonnesPipe, Alert, EmptyState, Loading, PageHeader],
   template: `
-    <!-- The emitter portal uses the design's card rows; other roles keep the table. -->
-    @if (isEmitter) {
+    <!-- Both trading portals use the design's card rows; other roles keep the table. -->
+    @if (portalDesign) {
       <div class="em-ac-header">
         <h1>Agreements</h1>
         <div class="em-ac-tools">
@@ -42,7 +42,7 @@ import { errMsg } from '../../shared/utils';
     <app-alert [message]="error()" />
     @if (loading()) {<app-loading />}
     @else if (!filtered().length) {<app-empty-state message="No agreements in this view." />}
-    @else if (isEmitter) {
+    @else if (portalDesign) {
       <div class="em-rows">
         @for (a of filtered(); track a.id) {
           <a class="em-row" [routerLink]="['/agreements', a.id]">
@@ -91,6 +91,8 @@ export class AgreementsList {
   private api = inject(ApiService);
   private auth = inject(AuthService);
   isEmitter = this.auth.hasRole('EMITTER');
+  /** Emitter and utilizer share the dark trading design; the other four roles keep the table. */
+  portalDesign = this.auth.hasRole('EMITTER', 'UTILIZER');
   rows = signal<AgreementDto[]>([]);
   loading = signal(true);
   error = signal<string | null>(null);

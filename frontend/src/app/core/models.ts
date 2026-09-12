@@ -3,7 +3,7 @@ export type CompanyStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 export type Tier = 'BRONZE' | 'SILVER' | 'GOLD' | 'DIAMOND';
 export type ListingMode = 'TENDER' | 'AUCTION' | 'CONTRACT';
 export type ListingStatus = 'OPEN' | 'SCHEDULED' | 'LIVE' | 'ENDED' | 'AWARDED' | 'CLOSED' | 'CANCELLED';
-export type AuctionFilter = 'live' | 'upcoming' | 'ended';
+export type AuctionFilter = 'live' | 'upcoming' | 'ended' | 'all';
 export type ProposalStatus = 'SUBMITTED' | 'AWARDED' | 'REJECTED' | 'WITHDRAWN';
 export type AgreementStatus = 'PENDING_VERIFICATION' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
 export type NegotiationStatus = 'OPEN' | 'ACCEPTED' | 'REJECTED' | 'CANCELLED';
@@ -153,7 +153,9 @@ export interface AuctionStateDto {
   leader?: AuctionBidder | null; bidCount: number; youAreLeading: boolean;
   canBid: boolean; blockedReason?: string | null; bindingTerms: string;
   emitterId?: string | null; emitterName?: string | null; emitterTier?: Tier | null;
-  city: string; state: string; concentrationPct: number; agreementId?: string | null;
+  city: string; state: string; concentrationPct: number;
+  captureTechnology?: string | null; physicalState?: string | null;
+  agreementId?: string | null;
   bids: AuctionBidDto[];
 }
 

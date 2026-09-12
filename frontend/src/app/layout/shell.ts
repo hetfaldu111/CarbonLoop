@@ -53,8 +53,6 @@ const NAV: Record<Role, NavItem[]> = {
     { label: 'Agreements', link: '/utilizer/agreements', icon: 'check' },
     { label: 'Negotiations', link: '/utilizer/negotiations', icon: 'chat' },
     { label: 'Shipments', link: '/utilizer/shipments', icon: 'shipment' },
-    // Not in the reference, but /utilizer/trust would otherwise be unreachable.
-    { label: 'Trust profile', link: '/utilizer/trust', icon: 'badge' },
   ],
   TRANSPORT: [
     { label: 'Offers', link: '/transport', icon: '✉', exact: true },

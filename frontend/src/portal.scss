@@ -977,3 +977,219 @@ a.em-kpi:hover { text-decoration: none; }
   .em-mk-stats { grid-template-columns: 1fr; }
   .em-mk-price .v { font-size: 22px; }
 }
+
+/* ============================================================
+   Utilizer auctions — the buyer's view of a lot, from the
+   supplied reference: segmented tabs, a big server-driven
+   countdown, the standing bid with an inline bid control, and
+   the ranked ladder of rivals shown only by pseudonym.
+   ============================================================ */
+
+/* Segmented control in the page header. */
+.ua-tabs {
+  display: inline-flex; padding: 4px; gap: 2px; border-radius: 12px;
+  background: rgba(13, 35, 24, 0.05); border: 1px solid rgba(13, 35, 24, 0.07);
+}
+.ua-tabs button {
+  padding: 7px 18px; border: none; border-radius: 9px; cursor: pointer; background: transparent;
+  font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 600; color: rgba(13, 35, 24, 0.55);
+  transition: background 0.15s, color 0.15s;
+}
+.ua-tabs button:hover:not(.active) { background: rgba(13, 35, 24, 0.06); color: #0d2318; }
+.ua-tabs button.active { background: #0d2318; color: #fff; }
+
+/* ---------- the lot card ---------- */
+.ua-card {
+  display: block; background: #fff; border-radius: 16px;
+  border: 1px solid rgba(13, 35, 24, 0.07); box-shadow: 0 1px 4px rgba(13, 35, 24, 0.04);
+  overflow: hidden;
+}
+.ua-card + .ua-card { margin-top: 16px; }
+.ua-card.done { opacity: 0.94; }
+.ua-card.done .ua-price { color: rgba(13, 35, 24, 0.55); }
+
+.ua-head {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 20px;
+  padding: 20px 24px 18px;
+}
+.ua-head-main { min-width: 0; }
+.ua-tags { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+
+.ua-state {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.04em;
+}
+.ua-state.live { color: #15803d; }
+.ua-state.live .dot {
+  width: 8px; height: 8px; border-radius: 50%; background: #22c55e;
+  animation: e-pulse 1.6s ease-in-out infinite;
+}
+.ua-state.sched { color: #92400e; }
+.ua-state.closed { color: rgba(13, 35, 24, 0.4); }
+
+.ua-ref { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: rgba(13, 35, 24, 0.4); }
+.ua-pill {
+  display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 99px;
+  font-family: 'Outfit', sans-serif; font-size: 11px; font-weight: 600; white-space: nowrap;
+}
+.ua-pill.lead { background: #dcfce7; color: #15803d; }
+.ua-pill.won { background: #dbeafe; color: #1d4ed8; }
+
+.ua-title { font-family: 'Outfit', sans-serif; font-size: 17px; font-weight: 700; color: #0d2318; margin: 0; }
+.ua-pid { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; color: #22c55e; margin-top: 3px; }
+.ua-meta { font-family: 'Outfit', sans-serif; font-size: 12px; color: rgba(13, 35, 24, 0.45); margin-top: 5px; }
+
+.ua-timer { flex: none; text-align: right; }
+.ua-timer-l {
+  font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600;
+  letter-spacing: 0.12em; text-transform: uppercase; color: rgba(13, 35, 24, 0.35);
+}
+.ua-clock {
+  font-family: 'JetBrains Mono', monospace; font-size: 38px; font-weight: 500; line-height: 1.1;
+  color: #0d2318; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; margin-top: 2px;
+  white-space: nowrap;
+}
+.ua-clock.urgent { color: #ef4444; }
+.ua-card.done .ua-clock { font-size: 24px; color: rgba(13, 35, 24, 0.32); }
+
+/* ---------- body ---------- */
+.ua-body { display: grid; grid-template-columns: 1fr 1.15fr; border-top: 1px solid rgba(13, 35, 24, 0.06); }
+.ua-left { padding: 20px 24px; border-right: 1px solid rgba(13, 35, 24, 0.06); display: flex; flex-direction: column; }
+.ua-right { padding: 20px 24px; display: flex; flex-direction: column; gap: 10px; }
+
+.ua-l {
+  font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600;
+  letter-spacing: 0.12em; text-transform: uppercase; color: rgba(13, 35, 24, 0.35);
+}
+.ua-price {
+  font-family: 'Outfit', sans-serif; font-size: 40px; font-weight: 800; line-height: 1;
+  color: #0d2318; margin: 8px 0 4px;
+}
+.ua-price span { font-size: 15px; font-weight: 500; color: rgba(13, 35, 24, 0.4); margin-left: 3px; }
+.ua-total { font-family: 'Outfit', sans-serif; font-size: 12px; color: rgba(13, 35, 24, 0.5); margin-bottom: 14px; }
+
+.ua-leader {
+  display: flex; align-items: center; gap: 12px; padding: 14px;
+  border-radius: 12px; background: rgba(34, 197, 94, 0.07); border: 1px solid rgba(34, 197, 94, 0.18);
+}
+.ua-leader .n {
+  width: 30px; height: 30px; flex: none; border-radius: 50%; display: grid; place-items: center;
+  background: #22c55e; color: #fff; font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 13px;
+}
+.ua-leader .nm { font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 600; color: #0d2318; margin-bottom: 4px; }
+
+.ua-nobids {
+  padding: 14px; border-radius: 12px; font-family: 'Outfit', sans-serif; font-size: 12px;
+  background: rgba(13, 35, 24, 0.03); border: 1px dashed rgba(13, 35, 24, 0.12); color: rgba(13, 35, 24, 0.5);
+}
+
+.ua-inc { font-family: 'Outfit', sans-serif; font-size: 12px; color: rgba(13, 35, 24, 0.5); margin: 14px 0 10px; }
+
+.ua-binding {
+  display: flex; gap: 10px; align-items: flex-start; margin-bottom: 12px; cursor: pointer;
+  padding: 12px; border-radius: 10px; background: rgba(13, 35, 24, 0.03); border: 1px solid rgba(13, 35, 24, 0.08);
+  font-family: 'Outfit', sans-serif; font-size: 11.5px; line-height: 1.45; color: rgba(13, 35, 24, 0.65);
+}
+.ua-binding input { width: auto; flex: none; margin-top: 2px; }
+
+.ua-bid {
+  width: 100%; padding: 15px 20px; border: none; border-radius: 12px; cursor: pointer;
+  background: #14532d; color: #fff;
+  font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 700;
+  transition: background 0.15s, transform 0.12s;
+}
+.ua-bid:hover:not(:disabled) { background: #166534; }
+.ua-bid:active:not(:disabled) { transform: translateY(1px); }
+.ua-bid:disabled { background: rgba(13, 35, 24, 0.15); color: rgba(13, 35, 24, 0.45); cursor: not-allowed; }
+
+.ua-note { font-family: 'Outfit', sans-serif; font-size: 11px; color: rgba(13, 35, 24, 0.45); margin: 8px 0 0; }
+.ua-blocked {
+  padding: 12px 14px; border-radius: 10px; font-family: 'Outfit', sans-serif; font-size: 12px;
+  background: #fff1d6; border: 1px solid rgba(154, 100, 0, 0.25); color: #8a5a00;
+}
+.ua-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: auto; padding-top: 16px; }
+
+@media (max-width: 900px) {
+  .ua-body { grid-template-columns: 1fr; }
+  .ua-left { border-right: none; border-bottom: 1px solid rgba(13, 35, 24, 0.06); }
+  .ua-clock { font-size: 30px; }
+  .ua-head { flex-direction: column; gap: 12px; }
+  .ua-timer { text-align: left; }
+}
+
+/* ============================================================
+   Utilizer · My Proposals, per the supplied reference.
+   ============================================================ */
+.shell.portal .content {
+  .up-title { font-family: 'Fraunces', Georgia, serif; font-size: 40px; font-weight: 700; color: #0d2318; margin: 0 0 22px; letter-spacing: -0.01em; }
+
+  .up-search {
+    display: flex; align-items: center; gap: 12px;
+    background: #fff; border: 1px solid rgba(13, 35, 24, 0.09); border-radius: 14px;
+    padding: 14px 18px; color: rgba(13, 35, 24, 0.35); margin-bottom: 14px;
+  }
+  .up-search svg { flex: none; position: static; transform: none; }
+  .up-search input {
+    flex: 1; width: auto; border: none; background: transparent; outline: none; padding: 0;
+    font-family: 'Outfit', sans-serif; font-size: 14px; color: #0d2318;
+  }
+  .up-search input::placeholder { color: rgba(13, 35, 24, 0.35); }
+
+  .up-filters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+  .up-filters-label { font-family: 'Outfit', sans-serif; font-size: 12px; color: rgba(13, 35, 24, 0.45); margin-right: 2px; }
+  .up-chip {
+    border: 1px solid rgba(13, 35, 24, 0.12); background: #fff; color: rgba(13, 35, 24, 0.65);
+    border-radius: 99px; padding: 6px 16px; cursor: pointer;
+    font-family: 'Outfit', sans-serif; font-size: 12.5px; font-weight: 500;
+    transition: background 0.14s, border-color 0.14s, color 0.14s;
+  }
+  .up-chip:hover { border-color: rgba(34, 197, 94, 0.45); color: #0d2318; }
+  .up-chip.on { background: #0d2318; border-color: #0d2318; color: #fff; }
+
+  .up-count { font-family: 'Outfit', sans-serif; font-size: 12.5px; color: rgba(13, 35, 24, 0.45); margin: 0 0 12px; }
+
+  .up-card {
+    background: #fff; border: 1px solid rgba(13, 35, 24, 0.07); border-radius: 16px;
+    box-shadow: 0 1px 4px rgba(13, 35, 24, 0.04); overflow: hidden;
+  }
+  .up-card + .up-card { margin-top: 14px; }
+
+  .up-card-head {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 14px 24px; border-bottom: 1px solid rgba(13, 35, 24, 0.05);
+  }
+  .up-ref { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: rgba(13, 35, 24, 0.45); letter-spacing: 0.02em; }
+  .up-dates { margin-left: auto; font-family: 'Outfit', sans-serif; font-size: 12px; color: rgba(13, 35, 24, 0.45); }
+  .up-pill {
+    display: inline-flex; align-items: center; border-radius: 99px; padding: 3px 11px;
+    font-family: 'Outfit', sans-serif; font-size: 11.5px; font-weight: 600; white-space: nowrap;
+  }
+  .up-pill.wait { background: #fef3c7; color: #92400e; }
+  .up-pill.ok { background: #dcfce7; color: #15803d; }
+  .up-pill.no { background: #fee2e2; color: #b91c1c; }
+  .up-pill.off { background: rgba(13, 35, 24, 0.07); color: rgba(13, 35, 24, 0.5); }
+
+  .up-card-body { display: flex; align-items: flex-start; gap: 24px; padding: 18px 24px 22px; }
+  .up-card-main { flex: 1; min-width: 0; }
+  .up-card-main h3 { font-family: 'Outfit', sans-serif; font-size: 17px; font-weight: 700; color: #0d2318; margin: 0 0 4px; }
+  .up-spec { font-family: 'Outfit', sans-serif; font-size: 14px; color: rgba(13, 35, 24, 0.6); margin: 0; }
+  .up-note { font-size: 13px; font-style: italic; color: rgba(13, 35, 24, 0.42); margin: 8px 0 0; }
+
+  .up-card-offer { flex: none; text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+  .up-offer-label { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; color: rgba(13, 35, 24, 0.4); }
+  .up-offer-price { font-family: 'Outfit', sans-serif; font-size: 24px; font-weight: 700; color: #0d2318; line-height: 1.2; }
+  .up-offer-sub { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: rgba(13, 35, 24, 0.45); }
+  .up-withdraw {
+    margin-top: 10px; border: 1.5px solid rgba(179, 38, 30, 0.3); background: transparent; color: #b3261e;
+    border-radius: 99px; padding: 5px 14px; cursor: pointer;
+    font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 600;
+  }
+  .up-withdraw:hover:not(:disabled) { background: rgba(179, 38, 30, 0.06); border-color: #b3261e; }
+  .up-withdraw:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  @media (max-width: 720px) {
+    .up-card-body { flex-direction: column; gap: 14px; }
+    .up-card-offer { align-items: flex-start; text-align: left; }
+    .up-dates { margin-left: 0; width: 100%; }
+  }
+}

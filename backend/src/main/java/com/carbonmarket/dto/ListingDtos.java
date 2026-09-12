@@ -73,6 +73,7 @@ public final class ListingDtos {
                                   AuctionLeaderDto leader, int bidCount, boolean youAreLeading, boolean canBid,
                                   String blockedReason, String bindingTerms, UUID emitterId, String emitterName,
                                   Tier emitterTier, String city, String state, Double concentrationPct,
+                                  String captureTechnology, PhysicalState physicalState,
                                   UUID agreementId, List<AuctionBidDto> bids) {}
 
     public record CostEstimateRequest(@NotNull UUID listingId, @NotNull @Positive Double quantityTonnes, Double requiredPurityPct,

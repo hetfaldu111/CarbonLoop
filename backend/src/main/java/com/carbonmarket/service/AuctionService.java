@@ -363,7 +363,8 @@ public class AuctionService {
                         : Math.round(l.getCurrentPricePerTonne() * l.getVolumeTonnes() * 100.0) / 100.0,
                 leader, ordered.size(), me.equals(l.getCurrentLeaderId()), canBid, blocked, BINDING_TERMS,
                 revealNames || finished ? e.getId() : null, revealNames || finished ? e.getName() : null,
-                lookup.tier(e.getId()), e.getCity(), e.getState(), p.getConcentrationPct(), agreementId, bidDtos);
+                lookup.tier(e.getId()), e.getCity(), e.getState(), p.getConcentrationPct(),
+                p.getCaptureTechnology(), p.getPhysicalState(), agreementId, bidDtos);
     }
 
     private static String friendly(ListingStatus s) {

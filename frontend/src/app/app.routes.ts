@@ -30,7 +30,6 @@ import { UtilizerDashboard } from './pages/utilizer/dashboard';
 import { Marketplace } from './pages/utilizer/marketplace';
 import { UtilizerListingDetail } from './pages/utilizer/listing-detail';
 import { MyProposals } from './pages/utilizer/proposals';
-import { TrustPage } from './pages/utilizer/trust';
 import { UtilizerAuctions } from './pages/utilizer/auctions';
 import { AuctionRoom } from './pages/shared/auction-room';
 import { TransportOffers } from './pages/transport/offers';
@@ -122,7 +121,6 @@ export const routes: Routes = [
         { path: 'negotiations/new', component: NegotiationNew, title: 'New negotiation' },
         { path: 'negotiations/:id', component: NegotiationDetail, title: 'Negotiation' },
         { path: 'shipments', component: ShipmentsList, title: 'Shipments' },
-        { path: 'trust', component: TrustPage, title: 'Trust profile' },
       ] },
 
       { path: 'transport', canActivate: [roleGuard('TRANSPORT')], children: [

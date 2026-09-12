@@ -26,8 +26,8 @@ function base(auth: AuthService): string { return auth.hasRole('EMITTER') ? '/em
   selector: 'app-negotiations-list',
   imports: [DatePipe, FormsModule, RouterLink, StatusBadge, MoneyPipe, TonnesPipe, Alert, EmptyState, Loading, PageHeader],
   template: `
-    <!-- The emitter portal uses the design's card rows; other roles keep the table. -->
-    @if (isEmitter) {
+    <!-- Both trading portals use the design's table; other roles keep the plain one. -->
+    @if (portalDesign) {
       <div class="em-ac-header">
         <h1>Negotiated contracts</h1>
         <div class="em-ac-tools">
@@ -49,7 +49,7 @@ function base(auth: AuthService): string { return auth.hasRole('EMITTER') ? '/em
     <app-alert [message]="error()" />
     @if (loading()) {<app-loading />}
     @else if (!filtered().length) {<app-empty-state message="No negotiations yet. Direct-connect with a counterparty to propose a long-term contract." icon="⇄" />}
-    @else if (isEmitter) {
+    @else if (portalDesign) {
       <div class="em-negt">
         <table>
           <thead><tr>
@@ -97,6 +97,8 @@ export class NegotiationsList {
   private auth = inject(AuthService);
   base = base(this.auth);
   isEmitter = this.auth.hasRole('EMITTER');
+  /** Emitter and utilizer share the dark trading design. */
+  portalDesign = this.auth.hasRole('EMITTER', 'UTILIZER');
   rows = signal<NegotiationDto[]>([]);
   loading = signal(true);
   error = signal<string | null>(null);
