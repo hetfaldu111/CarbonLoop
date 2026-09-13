@@ -227,23 +227,56 @@ APP_CORS_ORIGINS=https://your-app.vercel.app,https://*.vercel.app
 
 Password for every account: **`Password123!`**
 
-| Role | Email | Company |
-|:--|:--|:--|
-| 🛡 Admin | `admin@carbon.local` | Carbon Marketplace Admin |
-| 🏭 Emitter | `cement@carbon.local` | Saurashtra Cement Works · Gujarat |
-| 🏭 Emitter | `steel@carbon.local` | Kalinga Steel Plant · Odisha |
-| 🏭 Emitter | `power@carbon.local` | Kutch Thermal Power · pipeline connected |
-| 🏭 Emitter | `vindhya@carbon.local` | Vindhya Cement Industries · Madhya Pradesh |
-| 🏭 Emitter | `deccanref@carbon.local` | Deccan Refining Company · Andhra Pradesh |
-| 🌱 Utilizer | `methanol@carbon.local` | Gujarat Methanol Synthesis · Gold |
-| 🌱 Utilizer | `algae@carbon.local` | Bay of Bengal Algae Farms · Diamond |
-| 🌱 Utilizer | `greenhouse@carbon.local` | Sabarmati Agro Greenhouses · Silver |
-| 🌱 Utilizer | `concrete@carbon.local` | Carbonated Concrete Co · Bronze |
-| 🌱 Utilizer | `urea@carbon.local` | Konkan Urea Works · Maharashtra |
-| 🚛 Transport | `gujtrans@carbon.local` | Saurashtra Cryo Logistics |
-| 🚛 Transport | `odtrans@carbon.local` | East Coast Gas Carriers |
-| 🔬 Lab | `lab@carbon.local` | National CO₂ Testing Lab |
-| 🏛 Regulator | `regulator@carbon.local` | NITI CCUS Oversight Cell |
+**Signed in and ready to trade — 27 approved companies**
+
+| Role | Email | Company | Badge |
+|:--|:--|:--|:--|
+| 🛡 Admin | `admin@carbon.local` | Carbon Marketplace Admin · Gandhinagar, Gujarat | — |
+| 🏭 Emitter | `cement@carbon.local` | Saurashtra Cement Works · Porbandar, Gujarat | 🥇 Gold |
+| 🏭 Emitter | `steel@carbon.local` | Kalinga Steel Plant · Angul, Odisha | 🥈 Silver |
+| 🏭 Emitter | `power@carbon.local` | Kutch Thermal Power · Mundra, Gujarat | 💎 Diamond |
+| 🏭 Emitter | `korba@carbon.local` | Korba Valley Power Station · Korba, Chhattisgarh | 💎 Diamond |
+| 🏭 Emitter | `deccanref@carbon.local` | Deccan Refining Company · Visakhapatnam, Andhra Pradesh | 🥇 Gold |
+| 🏭 Emitter | `vindhya@carbon.local` | Vindhya Cement Industries · Satna, Madhya Pradesh | 🥈 Silver |
+| 🏭 Emitter | `sundargarh@carbon.local` | Sundargarh Sponge Iron · Rourkela, Odisha | 🥈 Silver |
+| 🏭 Emitter | `tarapur@carbon.local` | Tarapur Ammonia & Chemicals · Boisar, Maharashtra | 🥈 Silver |
+| 🏭 Emitter | `thar@carbon.local` | Thar Petro Refining · Barmer, Rajasthan | 🥉 Bronze |
+| 🌱 Utilizer | `algae@carbon.local` | Bay of Bengal Algae Farms · Paradip, Odisha | 💎 Diamond |
+| 🌱 Utilizer | `spirulina@carbon.local` | Nilgiri Spirulina Farms · Coimbatore, Tamil Nadu | 💎 Diamond |
+| 🌱 Utilizer | `methanol@carbon.local` | Gujarat Methanol Synthesis · Dahej, Gujarat | 🥇 Gold |
+| 🌱 Utilizer | `precast@carbon.local` | Warangal Precast Blocks · Warangal, Telangana | 🥇 Gold |
+| 🌱 Utilizer | `greenhouse@carbon.local` | Sabarmati Agro Greenhouses · Ahmedabad, Gujarat | 🥈 Silver |
+| 🌱 Utilizer | `malwa@carbon.local` | Malwa Protected Cultivation · Indore, Madhya Pradesh | 🥈 Silver |
+| 🌱 Utilizer | `bevgas@carbon.local` | Palar Valley Beverage Gases · Hosur, Tamil Nadu | 🥈 Silver |
+| 🌱 Utilizer | `concrete@carbon.local` | Carbonated Concrete Co · Rajkot, Gujarat | 🥉 Bronze |
+| 🌱 Utilizer | `urea@carbon.local` | Konkan Urea Works · Ratnagiri, Maharashtra | 🥉 Bronze |
+| 🌱 Utilizer | `synfuel@carbon.local` | Yamuna Synfuels · Mathura, Uttar Pradesh | 🥉 Bronze |
+| 🚛 Transport | `gujtrans@carbon.local` | Saurashtra Cryo Logistics · Jamnagar, Gujarat | — |
+| 🚛 Transport | `odtrans@carbon.local` | East Coast Gas Carriers · Cuttack, Odisha | — |
+| 🚛 Transport | `dectrans@carbon.local` | Deccan Cryo Roadways · Hyderabad, Telangana | — |
+| 🚛 Transport | `sahyadri@carbon.local` | Sahyadri Cryo Carriers · Pune, Maharashtra | — |
+| 🔬 Lab | `lab@carbon.local` | National CO₂ Testing Lab · Vadodara, Gujarat | — |
+| 🔬 Lab | `eastlab@carbon.local` | Eastern Gas Analytics · Bhubaneswar, Odisha | — |
+| 🏛 Regulator | `regulator@carbon.local` | NITI CCUS Oversight Cell · New Delhi | — |
+
+**Waiting in the admin's approvals queue — 8 sign-ups**
+
+These accounts exist but **cannot sign in yet**: `AuthService` refuses them with *"Company approval pending"* until an admin approves the company. Approve one as `admin@carbon.local` and it starts working immediately — that is the approvals demo.
+
+| Role | Email | Company | Waiting |
+|:--|:--|:--|:--|
+| 🏭 Emitter | `parasnath@carbon.local` | Parasnath Coke & Chemicals · Dhanbad, Jharkhand | 13 days |
+| 🏭 Emitter | `brahmaputra@carbon.local` | Brahmaputra Petro Refining · Dibrugarh, Assam | 9 days |
+| 🌱 Utilizer | `sundarban@carbon.local` | Sundarban Algal Biotech · Kolkata, West Bengal | 6 days |
+| 🏭 Emitter | `coastal@carbon.local` | Coastal Carbon Recovery · Mangaluru, Karnataka | 6 days |
+| 🏭 Emitter | `newco@carbon.local` | Bharat Bio-CO₂ Ltd · Surat, Gujarat | 5 days |
+| 🌱 Utilizer | `doaba@carbon.local` | Doaba Protected Farms · Jalandhar, Punjab | 4 days |
+| 🚛 Transport | `gtcryo@carbon.local` | Grand Trunk Cryo Logistics · Ambala, Haryana | 2 days |
+| 🔬 Lab | `himalab@carbon.local` | Himalayan Gas Testing Services · Dehradun, Uttarakhand | 1 day |
+
+**Rejected — 1**
+
+`suryanagar@carbon.local` · Suryanagar Carbon Traders · Kanpur, Uttar Pradesh — address and capacity unverified.
 
 Sign-in also offers one-click demo accounts, so you never need to type these.
 
