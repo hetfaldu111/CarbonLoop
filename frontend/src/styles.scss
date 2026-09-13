@@ -350,13 +350,7 @@ pre.doc { white-space: pre-wrap; font-family: var(--mono); font-size: 0.82rem; b
 .reco-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
 .reco-head h3 { margin: 0; }
 .reco { border-left: 3px solid var(--primary); }
-.reco-explain { margin: 0.5rem 0 0.9rem; font-size: 0.95rem; }
-.reco-grid { display: flex; flex-wrap: wrap; gap: 1.25rem; align-items: flex-end; }
-.reco-figure .label { color: var(--muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; }
-.reco-figure .value { font-size: 1.7rem; font-weight: 700; color: var(--primary); line-height: 1.15; }
-.reco-figure.alt .value { font-size: 1.25rem; color: var(--muted); font-weight: 600; }
-.reco-figure .sub { color: var(--muted); font-size: 0.85rem; }
-.reco-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-left: auto; align-items: center; }
+.reco-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
 .sel-summary { font-size: 0.9rem; }
 .sel-summary.over { color: var(--danger); }
 .table tr.picked { background: var(--primary-soft); }

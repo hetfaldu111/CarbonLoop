@@ -35,36 +35,16 @@ import { errMsg } from '../../shared/utils';
         <div class="alert alert-info mb">Delivery schedule attached to this tender: <strong>{{ l.monthlyTonnes | tonnes }} per month for {{ l.deliveryMonths }} months</strong>. Winning proposals inherit this schedule in their agreement.</div>
       }
 
-      <!-- ===== Profit-optimal award recommendation ===== -->
+      <!-- ===== Award shortcuts. The figures live in the proposals table below. ===== -->
       @if (sug(); as s) {
         <div class="card reco mb">
-          <div class="reco-head">
-            <h3>Best combination by revenue <span class="muted small">— exact calculation, not a prediction</span></h3>
-            @if (!s.exact) {<span class="badge status-warn">approximate (too many proposals for exact search)</span>}
-          </div>
-          <p class="reco-explain">{{ s.explanation }}</p>
-          <div class="reco-grid">
-            <div class="reco-figure">
-              <div class="label">Recommended revenue</div>
-              <div class="value">{{ s.recommended.totalRevenue | money }}</div>
-              <div class="sub">{{ s.recommended.totalTonnes | tonnes }} of {{ s.capacityTonnes | tonnes }} released@if (s.recommended.leftoverTonnes > 0) {, {{ s.recommended.leftoverTonnes | tonnes }} returns to free stock}</div>
-            </div>
-            @if (gapVsSingle(); as g) {
-              <div class="reco-figure alt">
-                <div class="label">{{ g.label }}</div>
-                <div class="value">{{ g.totalRevenue | money }}</div>
-                <div class="sub">{{ diff() | money }} less than the recommendation</div>
-              </div>
+          <div class="reco-actions">
+            <button class="btn btn-primary" (click)="useRecommendation()" [disabled]="busy() || l.status !== 'OPEN'">Select the recommended combination</button>
+            @for (a of s.alternatives; track a.label) {
+              <button class="btn btn-sm" (click)="useOption(a)" [disabled]="busy() || l.status !== 'OPEN'">Select: {{ a.label }}</button>
             }
-            <div class="reco-actions">
-              <button class="btn btn-primary" (click)="useRecommendation()" [disabled]="busy() || l.status !== 'OPEN'">Select the recommended combination</button>
-              @for (a of s.alternatives; track a.label) {
-                <button class="btn btn-sm" (click)="useOption(a)" [disabled]="busy() || l.status !== 'OPEN'">Select: {{ a.label }}</button>
-              }
-              <button class="btn btn-sm" (click)="clearSelection()" [disabled]="busy() || !selected().size">Clear selection</button>
-            </div>
+            <button class="btn btn-sm" (click)="clearSelection()" [disabled]="busy() || !selected().size">Clear selection</button>
           </div>
-          <p class="muted small mt">How this is computed: revenue = quantity × offered price per tonne. The server solves an exact 0/1 knapsack for the highest-revenue set of proposals that fits {{ s.capacityTonnes | tonnes }}. Equal-revenue ties go to the higher badge. You are free to ignore all of it and pick whoever you want.</p>
         </div>
       }
 
@@ -150,8 +130,6 @@ export class EmitterListingDetail {
   selectedTonnes = computed(() => this.proposals().filter((p) => this.selected().has(p.id)).reduce((t, p) => t + p.quantityTonnes, 0));
   selectedRevenue = computed(() => this.proposals().filter((p) => this.selected().has(p.id)).reduce((t, p) => t + p.quantityTonnes * p.offeredPricePerTonne, 0));
   overCapacity = computed(() => { const l = this.l(); return !!l && this.selectedTonnes() > l.volumeTonnes + 1e-6; });
-  gapVsSingle = computed(() => this.sug()?.alternatives?.[0] ?? null);
-  diff = computed(() => { const s = this.sug(); const a = this.gapVsSingle(); return s && a ? s.recommended.totalRevenue - a.totalRevenue : 0; });
 
   ngOnInit(): void { this.load(); }
 
