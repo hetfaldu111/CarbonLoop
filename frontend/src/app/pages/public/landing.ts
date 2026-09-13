@@ -625,22 +625,17 @@ export class Landing implements OnDestroy {
    * so the loop visibly closes before it starts again.
    */
   activeArc(): string {
-    const segments = this.active() + 1;        // 1 at node 1, 8 once the ring is closed
+    const reached = this.active();             // 0 at node 1, 7 at node 8
+    // Nothing has been traversed yet at the first node, so draw no trail.
+    if (reached === 0) return '';
+
     const point = (step: number) => {
       const a = ((step * 45 - 90) * Math.PI) / 180;
       return { x: 200 + 140 * Math.cos(a), y: 200 + 140 * Math.sin(a) };
     };
     const start = point(0);
-
-    // A single arc cannot start and finish at the same point, so close the ring in two halves.
-    if (segments >= 8) {
-      const opposite = point(4);
-      return `M ${start.x},${start.y} A 140,140 0 1,1 ${opposite.x},${opposite.y}`
-           + ` A 140,140 0 1,1 ${start.x},${start.y}`;
-    }
-
-    const end = point(segments);
-    const largeArc = segments * 45 > 180 ? 1 : 0;
+    const end = point(reached);                // ends ON the current node, never beyond it
+    const largeArc = reached * 45 > 180 ? 1 : 0;
     return `M ${start.x},${start.y} A 140,140 0 ${largeArc},1 ${end.x},${end.y}`;
   }
 
