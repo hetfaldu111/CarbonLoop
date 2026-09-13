@@ -620,13 +620,29 @@ export class Landing implements OnDestroy {
 
   tickColor(type: string): string { return TICK_COLOR[type] ?? '#30BE69'; }
 
-  /** The highlighted 45° arc that sweeps the lifecycle ring. */
+  /**
+   * The green trail around the lifecycle ring. It grows from node 1 and keeps every
+   * segment it has covered, rather than showing only the segment currently in play,
+   * so the loop visibly closes before it starts again.
+   */
   activeArc(): string {
-    const a1 = ((this.active() * 45 - 90) * Math.PI) / 180;
-    const a2 = (((this.active() + 1) * 45 - 90) * Math.PI) / 180;
-    const x1 = 200 + 140 * Math.cos(a1), y1 = 200 + 140 * Math.sin(a1);
-    const x2 = 200 + 140 * Math.cos(a2), y2 = 200 + 140 * Math.sin(a2);
-    return `M ${x1},${y1} A 140,140 0 0,1 ${x2},${y2}`;
+    const segments = this.active() + 1;        // 1 at node 1, 8 once the ring is closed
+    const point = (step: number) => {
+      const a = ((step * 45 - 90) * Math.PI) / 180;
+      return { x: 200 + 140 * Math.cos(a), y: 200 + 140 * Math.sin(a) };
+    };
+    const start = point(0);
+
+    // A single arc cannot start and finish at the same point, so close the ring in two halves.
+    if (segments >= 8) {
+      const opposite = point(4);
+      return `M ${start.x},${start.y} A 140,140 0 1,1 ${opposite.x},${opposite.y}`
+           + ` A 140,140 0 1,1 ${start.x},${start.y}`;
+    }
+
+    const end = point(segments);
+    const largeArc = segments * 45 > 180 ? 1 : 0;
+    return `M ${start.x},${start.y} A 140,140 0 ${largeArc},1 ${end.x},${end.y}`;
   }
 
   ngOnDestroy(): void { this.timers.forEach((t) => clearInterval(t)); }
