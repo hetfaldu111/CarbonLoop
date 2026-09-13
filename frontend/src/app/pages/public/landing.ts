@@ -459,8 +459,7 @@ const INDUSTRIES = [
   <!-- ═══════════ RULES / POLICY ═══════════ -->
   <section class="cl-section" style="padding-top:2rem">
     <div class="cl-section-head" style="margin-bottom:2.5rem">
-      <div class="cl-eyebrow">How Matching Works</div>
-      <h2 class="cl-h2">Deterministic. No AI, no ML,<br />no blockchain.</h2>
+      <h2 class="cl-h2">How Matching Works</h2>
     </div>
     <div class="cl-rules">
       <div class="cl-rule">
