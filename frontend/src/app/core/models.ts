@@ -46,6 +46,11 @@ export interface CompanyDto {
   sector: string; registrationNumber: string; roleProfile?: Record<string, unknown>; rejectionReason?: string | null;
   createdAt: string; approvedAt?: string | null;
 }
+/** The subset of a company a signed-in user may correct itself; identity fields an admin verified stay fixed. */
+export interface ProfileUpdate {
+  contactPhone: string; address: string; city: string; state: string; country: string;
+  latitude: number; longitude: number;
+}
 export interface DirectoryEntry { id: string; name: string; city: string; state: string; sector: string; tier: Tier; }
 
 export interface TrustDto {

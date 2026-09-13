@@ -12,6 +12,7 @@ import { AdminCompanies } from './pages/admin/companies';
 import { AdminCompanyDetail } from './pages/admin/company-detail';
 import { AuditLog } from './pages/shared/audit-log';
 import { Notifications } from './pages/shared/notifications';
+import { Profile } from './pages/shared/profile';
 import { AgreementsList } from './pages/shared/agreements-list';
 import { AgreementDetail } from './pages/shared/agreement-detail';
 import { ShipmentsList } from './pages/shared/shipments-list';
@@ -80,6 +81,7 @@ export const routes: Routes = [
   {
     path: '', component: Shell, canActivate: [authGuard], children: [
       { path: 'notifications', component: Notifications, title: 'Notifications' },
+      { path: 'profile', component: Profile, title: 'Profile' },
       { path: 'agreements/:id', component: AgreementDetail, title: 'Agreement' },
       { path: 'shipments/:id', component: ShipmentDetail, title: 'Shipment' },
       { path: 'listings/:id', component: RoleRedirect, data: { kind: 'listings' } },

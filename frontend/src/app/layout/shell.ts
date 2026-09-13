@@ -113,6 +113,13 @@ const NAV: Record<Role, NavItem[]> = {
           }
         </nav>
         <div class="sidebar-footer">
+          <a class="logout-btn" routerLink="/profile" routerLinkActive="active">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="8" cy="5.2" r="2.8" /><path d="M2.6 14a5.4 5.4 0 0110.8 0" />
+            </svg>
+            Profile
+          </a>
           <button class="logout-btn" (click)="auth.logout()">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"
                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

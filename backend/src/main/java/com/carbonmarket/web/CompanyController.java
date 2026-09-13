@@ -5,6 +5,8 @@ import com.carbonmarket.domain.Role;
 import com.carbonmarket.dto.CompanyDtos.CompanyDto;
 import com.carbonmarket.dto.CompanyDtos.DirectoryEntry;
 import com.carbonmarket.dto.CompanyDtos.TrustDto;
+import com.carbonmarket.dto.CompanyDtos.UpdateProfileRequest;
+import jakarta.validation.Valid;
 import com.carbonmarket.service.CompanyService;
 import com.carbonmarket.service.TrustService;
 import org.springframework.web.bind.annotation.*;
@@ -27,6 +29,11 @@ public class CompanyController {
 
     @GetMapping("/me")
     public CompanyDto me() { return companies.get(current.companyId()); }
+
+    @PutMapping("/me")
+    public CompanyDto updateMe(@Valid @RequestBody UpdateProfileRequest r) {
+        return companies.updateProfile(current.companyId(), r);
+    }
 
     @GetMapping("/me/trust")
     public TrustDto myTrust() { return trust.dto(current.companyId()); }

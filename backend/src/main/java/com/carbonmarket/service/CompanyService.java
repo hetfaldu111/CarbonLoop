@@ -8,6 +8,7 @@ import com.carbonmarket.domain.Role;
 import com.carbonmarket.domain.TrustProfile;
 import com.carbonmarket.dto.CompanyDtos.CompanyDto;
 import com.carbonmarket.dto.CompanyDtos.DirectoryEntry;
+import com.carbonmarket.dto.CompanyDtos.UpdateProfileRequest;
 import com.carbonmarket.repository.CompanyRepository;
 import com.carbonmarket.repository.TrustProfileRepository;
 import org.springframework.stereotype.Service;
@@ -32,6 +33,31 @@ public class CompanyService {
         this.lookup = lookup;
         this.audit = audit;
         this.notifications = notifications;
+    }
+
+    /**
+     * Updates the fields a company owns. Coordinates feed transport distance, cost and the
+     * carrier notification radius, so a move is recorded in the audit trail.
+     */
+    @Transactional
+    public CompanyDto updateProfile(UUID id, UpdateProfileRequest r) {
+        Company c = lookup.company(id);
+        boolean moved = !java.util.Objects.equals(c.getLatitude(), r.latitude())
+                || !java.util.Objects.equals(c.getLongitude(), r.longitude());
+
+        c.setContactPhone(r.contactPhone().trim());
+        c.setAddress(r.address().trim());
+        c.setCity(r.city().trim());
+        c.setState(r.state().trim());
+        c.setCountry(r.country().trim());
+        c.setLatitude(r.latitude());
+        c.setLongitude(r.longitude());
+        if (r.roleProfile() != null) c.setRoleProfile(r.roleProfile());
+        companies.save(c);
+
+        audit.record("PROFILE_UPDATED", "Company", id,
+                AuditService.details("city", c.getCity(), "state", c.getState(), "relocated", moved));
+        return CompanyDto.from(c, trust.findById(id).orElse(null));
     }
 
     @Transactional(readOnly = true)

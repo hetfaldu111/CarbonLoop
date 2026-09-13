@@ -6,7 +6,7 @@ import {
   ContractOfferDto, ContractOfferInput, CostEstimateDto,
   CostEstimateRequest, CreateListingRequest, CreateNegotiationRequest, CreateProposalRequest, CreateShipmentRequest,
   DecideRequest, DeliverRequest, DirectoryEntry, ForecastDto, ImpactDto, ListingDto, LoadRequest, NegotiationDto,
-  NotificationDto, Page, PassportDto, PassportPublicDto, ProposalDto, PublicListingDto, RatesDto, RegulatorCompanyDetail,
+  NotificationDto, Page, PassportDto, PassportPublicDto, ProfileUpdate, ProposalDto, PublicListingDto, RatesDto, RegulatorCompanyDetail,
   RegulatorCompanyRow, RegulatorOverview, ShipmentDto, TransportOfferDto, TrustDto, VerificationRequestDto,
 } from './models';
 
@@ -34,6 +34,7 @@ export class ApiService {
 
   // Companies
   myCompany(): Observable<CompanyDto> { return this.http.get<CompanyDto>('/api/companies/me'); }
+  updateProfile(body: ProfileUpdate): Observable<CompanyDto> { return this.http.put<CompanyDto>('/api/companies/me', body); }
   myTrust(): Observable<TrustDto> { return this.http.get<TrustDto>('/api/companies/me/trust'); }
   trustOf(id: string): Observable<TrustDto> { return this.http.get<TrustDto>(`/api/companies/${id}/trust`); }
   directory(role: 'EMITTER' | 'UTILIZER'): Observable<DirectoryEntry[]> { return this.http.get<DirectoryEntry[]>('/api/companies/directory', { params: this.params({ role }) }); }
