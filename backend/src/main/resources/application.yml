@@ -1,5 +1,6 @@
 server:
-  port: 8080
+  # Hosts such as Railway assign a port and health-check it. Falls back to 8080 locally.
+  port: ${PORT:8080}
 
 spring:
   application:
