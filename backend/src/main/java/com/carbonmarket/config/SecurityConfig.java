@@ -31,6 +31,9 @@ import java.util.Map;
 public class SecurityConfig {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final AppProperties props;
+
+    public SecurityConfig(AppProperties props) { this.props = props; }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, JwtFilter jwtFilter) throws Exception {
@@ -63,7 +66,9 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration cfg = new CorsConfiguration();
-        cfg.setAllowedOrigins(List.of("http://localhost:4200", "http://127.0.0.1:4200"));
+        // Patterns rather than exact origins, so a wildcard host such as
+        // https://*.vercel.app covers preview deployments too.
+        cfg.setAllowedOriginPatterns(props.getCorsOrigins());
         cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         cfg.setAllowedHeaders(List.of("*"));
         cfg.setExposedHeaders(List.of("Content-Disposition"));
