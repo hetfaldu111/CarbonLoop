@@ -20,9 +20,14 @@ import java.util.*;
 
 /**
  * Deterministic demo data (fixed UUIDs). Idempotent: skips when the admin user already exists.
- * ID scheme: companies ...0001xx, users ...0002xx, passports ...000342-345, listings ...001001+,
- * proposals ...002001+, agreements ...003001+, negotiations ...004001, offers ...004101+, shipments ...005001+,
- * transport offers ...005101+, verification requests ...006001+, forecasts ...007001.
+ * ID scheme: companies ...000101-130, users ...000201-230 (company + 100), passports ...000342-357,
+ * listings ...001001-1028, proposals ...002001-2050, agreements ...003001-3031, negotiations ...004001-4010,
+ * contract offers ...004101+, shipments ...005001-5026, transport offers ...005101-5140,
+ * verification requests ...006001+, forecasts ...007001+, auction bids ...008001+.
+ *
+ * The set is sized so that every page has several rows and no filter comes back empty: each listing,
+ * agreement, shipment, transport-offer, negotiation, verification and passport state appears at least
+ * twice, across 12 states and every sector.
  */
 @Component
 public class DataSeeder implements CommandLineRunner {
@@ -89,9 +94,26 @@ public class DataSeeder implements CommandLineRunner {
 
     // ---- Expanded demo set: extra regions, sectors and states so every role has enough to show ----
     public static final UUID VINDHYA = id(114), DECCANREF = id(115), UREA = id(116), MALWA = id(117),
-            DECTRANS = id(118), COASTAL = id(119), QUICKFIX = id(120);
+            DECTRANS = id(118), COASTAL = id(119), SURYANAGAR = id(120);
     public static final UUID P346 = id(346), P347 = id(347), P348 = id(348), P349 = id(349);
     public static final UUID L10 = id(1010), L11 = id(1011), L12 = id(1012), L13 = id(1013), L14 = id(1014), L15 = id(1015);
+
+    // ---- Wider demo set: four more emitters, four more utilizers, a fourth carrier, a second lab ----
+    public static final UUID TARAPUR = id(121), SUNDARGARH = id(122), KORBA = id(123), THAR = id(124),
+            SPIRULINA = id(125), PRECAST = id(126), BEVGAS = id(127), SYNFUEL = id(128),
+            SAHYADRI = id(129), EASTLAB = id(130);
+    /** Sign-ups still sitting in the admin's approvals queue, oldest first. */
+    public static final UUID PARASNATH = id(131), BRAHMAPUTRA = id(132), SUNDARBAN = id(133),
+            DOABA = id(134), GTCRYO = id(135), HIMALAB = id(136);
+    public static final UUID P350 = id(350), P351 = id(351), P352 = id(352), P353 = id(353),
+            P354 = id(354), P355 = id(355), P356 = id(356), P357 = id(357);
+    public static final UUID L16 = id(1016), L17 = id(1017), L18 = id(1018), L19 = id(1019), L20 = id(1020),
+            L21 = id(1021), L22 = id(1022), L23 = id(1023), L24 = id(1024), L25 = id(1025),
+            L26 = id(1026), L27 = id(1027), L28 = id(1028), L29 = id(1029);
+    /** Negotiation threads: 4001 is the original signed contract, 4002-4010 widen the states. */
+    public static final UUID NEG_CEM_CONC = id(4002), NEG_STL_ALGAE = id(4003), NEG_PWR_GH = id(4004),
+            NEG_CEM_METH = id(4005), NEG_STL_CONC = id(4006), NEG_TAR_BEV = id(4007),
+            NEG_KOR_SYN = id(4008), NEG_VIN_MAL = id(4009), NEG_DEC_SPI = id(4010);
 
     @Override
     @Transactional
@@ -391,7 +413,17 @@ public class DataSeeder implements CommandLineRunner {
         notifications.notify(ADMIN, "SIGNUP_PENDING", "New sign-up awaiting verification", "Bharat Bio-CO2 Ltd registered as EMITTER. Verify the company (form review + call/visit) before approving.", "Company", NEWCO);
         audit.record(NEWCO, Role.EMITTER, "COMPANY_REGISTERED", "Company", NEWCO, AuditService.details("name", "Bharat Bio-CO2 Ltd", "role", "EMITTER"));
 
+        notifications.notify(NEWCO, "SIGNUP_PENDING", "Your registration is under review",
+                "Thanks for registering Bharat Bio-CO2 Ltd. The platform team verifies every new company before it can publish a CO2 Passport.", "Company", NEWCO);
+        notifications.notify(STEEL, "PROPOSAL_RECEIVED", "Three proposals on CO2-IND-2026-000343",
+                "1000 t tender: two buyers want 500 t each and one wants the whole lot. Open the tender to compare the combinations.", "Listing", L7);
+        notifications.notify(METHANOL, "PROPOSAL_SUBMITTED", "Proposal submitted on CO2-IND-2026-000343",
+                "Your bid of ₹4400/t for 500 t is in. The emitter may award part of the lot to more than one buyer.", "Listing", L7);
+        notifications.notify(ALGAE, "PROPOSAL_SUBMITTED", "Proposal submitted on CO2-IND-2026-000343",
+                "Your bid of ₹4300/t for 500 t is in. Partial awards are allowed on this tender.", "Listing", L7);
+
         seedExpandedDemoSet(now, today);
+        seedWiderDemoSet(now, today);
     }
 
     // =====================================================================================
@@ -412,23 +444,26 @@ public class DataSeeder implements CommandLineRunner {
         company(DECTRANS, "Deccan Cryo Roadways", Role.TRANSPORT, Sector.LOGISTICS, "Hyderabad", "Telangana", 17.38, 78.49, "dectrans@carbon.local", "Ravi Reddy", CompanyStatus.APPROVED);
         // A second sign-up waiting on the admin, so the approvals queue is not a single row.
         company(COASTAL, "Coastal Carbon Recovery", Role.EMITTER, Sector.CHEMICALS, "Mangaluru", "Karnataka", 12.91, 74.86, "coastal@carbon.local", "Girish Pai", CompanyStatus.PENDING);
-        // A rejected application, so that state is visible somewhere. Invented company.
-        company(QUICKFIX, "Quickfix Carbon Traders", Role.UTILIZER, Sector.OTHER, "Kanpur", "Uttar Pradesh", 26.45, 80.33, "quickfix@carbon.local", "Applicant", CompanyStatus.REJECTED);
-        companies.findById(QUICKFIX).ifPresent(c -> {
+        // A rejected application, so that state is visible somewhere.
+        // Entirely invented name: no real firm is ever placed in a negative role in this seed.
+        company(SURYANAGAR, "Suryanagar Carbon Traders", Role.UTILIZER, Sector.OTHER, "Kanpur", "Uttar Pradesh", 26.45, 80.33, "suryanagar@carbon.local", "Applicant", CompanyStatus.REJECTED);
+        companies.findById(SURYANAGAR).ifPresent(c -> {
             c.setRejectionReason("Could not verify the registered address or the stated offtake capacity during the follow-up call.");
             companies.save(c);
         });
-        audit.record(ADMIN, Role.ADMIN, "COMPANY_REJECTED", "Company", QUICKFIX,
-                AuditService.details("name", "Quickfix Carbon Traders", "reason", "Address and capacity unverified"));
+        audit.record(ADMIN, Role.ADMIN, "COMPANY_REJECTED", "Company", SURYANAGAR,
+                AuditService.details("name", "Suryanagar Carbon Traders", "reason", "Address and capacity unverified"));
         notifications.notify(ADMIN, "SIGNUP_PENDING", "New sign-up awaiting verification",
                 "Coastal Carbon Recovery registered as EMITTER from Mangaluru, Karnataka. Verify before approving.", "Company", COASTAL);
+        notifications.notify(COASTAL, "SIGNUP_PENDING", "Your registration is under review",
+                "Thanks for registering Coastal Carbon Recovery. The platform team verifies every new company before it can trade; you will be notified as soon as the review is done.", "Company", COASTAL);
         audit.record(COASTAL, Role.EMITTER, "COMPANY_REGISTERED", "Company", COASTAL,
                 AuditService.details("name", "Coastal Carbon Recovery", "role", "EMITTER"));
 
         // Trust consistent with the agreements created below.
         trust.set(UREA, 4, 2, 1);      // one cancelled contract
         trust.set(MALWA, 3, 2, 0);
-        for (UUID c : List.of(VINDHYA, DECCANREF, DECTRANS, COASTAL, QUICKFIX)) trust.getOrCreate(c);
+        for (UUID c : List.of(VINDHYA, DECCANREF, DECTRANS, COASTAL, SURYANAGAR)) trust.getOrCreate(c);
 
         // ---- Passports ----
         Co2Passport p346 = passport(P346, "CO2-IND-2026-000346", VINDHYA, "Cement kiln flue gas (line 1)", CarbonOrigin.PROCESS, "Amine capture (MEA)",
@@ -643,6 +678,742 @@ public class DataSeeder implements CommandLineRunner {
                 "Reconciliation failed on a Mundra to Dahej run (seal and weight) and a Satna to Ratnagiri run (purity). Both are visible in the company drill-down.", "Company", VINDHYA);
     }
 
+    // =====================================================================================
+    // Wider demo set
+    // -------------------------------------------------------------------------------------
+    // Four more emitters, four more utilizers, a fourth carrier and a second lab, each with
+    // their own passports, listings, proposals, agreements and shipments. Everything here is
+    // here so that no page shows a lone row and no status filter comes back empty: a second
+    // LIVE auction and an ENDED one, two CANCELLED listings, a tender closed after rejecting
+    // its proposals, a REJECTED passport, an IN_REVIEW lab review, a second expired COA,
+    // weight-gap and meter-mismatch reconciliation flags, and EXPIRED carrier offers.
+    // =====================================================================================
+    private void seedWiderDemoSet(Instant now, LocalDate today) {
+        // ---- Companies: Maharashtra, Chhattisgarh, Rajasthan, Tamil Nadu added ----
+        company(TARAPUR, "Tarapur Ammonia & Chemicals", Role.EMITTER, Sector.CHEMICALS, "Boisar", "Maharashtra", 19.80, 72.75, "tarapur@carbon.local", "Vivek Ranade", CompanyStatus.APPROVED);
+        company(SUNDARGARH, "Sundargarh Sponge Iron", Role.EMITTER, Sector.STEEL, "Rourkela", "Odisha", 22.26, 84.85, "sundargarh@carbon.local", "Bibhu Behera", CompanyStatus.APPROVED);
+        company(KORBA, "Korba Valley Power Station", Role.EMITTER, Sector.POWER, "Korba", "Chhattisgarh", 22.35, 82.68, "korba@carbon.local", "Shalini Verma", CompanyStatus.APPROVED);
+        company(THAR, "Thar Petro Refining", Role.EMITTER, Sector.REFINERY, "Barmer", "Rajasthan", 25.75, 71.38, "thar@carbon.local", "Mahendra Singh", CompanyStatus.APPROVED);
+        company(SPIRULINA, "Nilgiri Spirulina Farms", Role.UTILIZER, Sector.ALGAE, "Coimbatore", "Tamil Nadu", 11.02, 76.96, "spirulina@carbon.local", "Aravind Krishnan", CompanyStatus.APPROVED);
+        company(PRECAST, "Warangal Precast Blocks", Role.UTILIZER, Sector.BUILDING_MATERIALS, "Warangal", "Telangana", 17.98, 79.59, "precast@carbon.local", "Sridhar Rao", CompanyStatus.APPROVED);
+        company(BEVGAS, "Palar Valley Beverage Gases", Role.UTILIZER, Sector.OTHER, "Hosur", "Tamil Nadu", 12.74, 77.83, "bevgas@carbon.local", "Latha Subramanian", CompanyStatus.APPROVED);
+        company(SYNFUEL, "Yamuna Synfuels", Role.UTILIZER, Sector.FUEL_SYNTHESIS, "Mathura", "Uttar Pradesh", 27.49, 77.67, "synfuel@carbon.local", "Rakesh Agarwal", CompanyStatus.APPROVED);
+        company(SAHYADRI, "Sahyadri Cryo Carriers", Role.TRANSPORT, Sector.LOGISTICS, "Pune", "Maharashtra", 18.52, 73.86, "sahyadri@carbon.local", "Nandkumar Pawar", CompanyStatus.APPROVED);
+        company(EASTLAB, "Eastern Gas Analytics", Role.LAB, Sector.LAB, "Bhubaneswar", "Odisha", 20.30, 85.82, "eastlab@carbon.local", "Dr. Ananya Sahu", CompanyStatus.APPROVED);
+
+        // Utilizer badges band on completed vs cancelled agreements, so every tier is represented.
+        trust.set(SPIRULINA, 8, 8, 0);   // 100 → DIAMOND
+        trust.set(PRECAST, 6, 5, 0);     // 83  → GOLD
+        trust.set(BEVGAS, 5, 3, 0);      // 60  → SILVER
+        trust.set(SYNFUEL, 2, 0, 1);     // 0   → BRONZE
+        for (UUID c : List.of(TARAPUR, SUNDARGARH, KORBA, THAR, SAHYADRI, EASTLAB)) trust.getOrCreate(c);
+
+        // ---- Passports ----
+        Co2Passport p350 = passport(P350, "CO2-IND-2026-000350", TARAPUR, "Ammonia synthesis purge gas", CarbonOrigin.PROCESS, "Physical solvent (Selexol)",
+                45.0, 40.0, 52.0, 800, 99.4, PhysicalState.LIQUEFIED, 21.0, -23.0,
+                imp(8, 25, 4, 1, 0.5, 2, 600), "MTR-BOI-02", "Tarapur chemical complex, Maharashtra", 19.80, 72.75, true,
+                VerificationStatus.VERIFIED, LabCertificateStatus.ISSUED, now.minus(28, ChronoUnit.DAYS), now.plus(152, ChronoUnit.DAYS));
+        Co2Passport p351 = passport(P351, "CO2-IND-2026-000351", SUNDARGARH, "Sponge iron kiln off-gas", CarbonOrigin.FOSSIL, "Amine capture (MEA)",
+                28.0, 24.0, 33.0, 600, 93.8, PhysicalState.GASEOUS, 7.0, 22.0,
+                imp(220, 900, 55, 30, 7, 400, 9600), "MTR-RKL-05", "Rourkela sponge iron works, Odisha", 22.26, 84.85, false,
+                VerificationStatus.VERIFIED, LabCertificateStatus.ISSUED, now.minus(50, ChronoUnit.DAYS), now.plus(130, ChronoUnit.DAYS));
+        Co2Passport p352 = passport(P352, "CO2-IND-2026-000352", KORBA, "Lignite boiler flue gas", CarbonOrigin.FOSSIL, "Amine capture (advanced solvent)",
+                70.0, 62.0, 80.0, 2000, 97.6, PhysicalState.LIQUEFIED, 19.0, -21.0,
+                imp(26, 75, 14, 6, 1, 8, 1900), "MTR-KRB-01", "Korba power station, Chhattisgarh", 22.35, 82.68, false,
+                VerificationStatus.VERIFIED, LabCertificateStatus.ISSUED, now.minus(25, ChronoUnit.DAYS), now.plus(155, ChronoUnit.DAYS));
+        Co2Passport p353 = passport(P353, "CO2-IND-2026-000353", THAR, "Hydrogen unit off-gas", CarbonOrigin.FOSSIL, "Physical solvent (Rectisol)",
+                38.0, 33.0, 44.0, 900, 98.9, PhysicalState.LIQUEFIED, 22.0, -22.0,
+                imp(14, 40, 7, 3, 1, 4, 1100), "MTR-BRM-03", "Barmer refinery, Rajasthan", 25.75, 71.38, true,
+                VerificationStatus.VERIFIED, LabCertificateStatus.ISSUED, now.minus(10, ChronoUnit.DAYS), now.plus(170, ChronoUnit.DAYS));
+        // The lab measured well below the claimed concentration, so this one was rejected outright.
+        Co2Passport p354 = passport(P354, "CO2-IND-2026-000354", SUNDARGARH, "Coal gasifier raw gas", CarbonOrigin.FOSSIL, "Amine capture (MEA)",
+                16.0, 12.0, 20.0, 350, 94.0, PhysicalState.GASEOUS, 6.0, 25.0,
+                imp(400, 1500, 90, 60, 18, 900, 15000), "MTR-RKL-08", "Rourkela sponge iron works, Odisha", 22.26, 84.85, false,
+                VerificationStatus.REJECTED, LabCertificateStatus.NONE, null, null);
+        // Claimed but not yet certified; a lab has picked it up and is mid-review.
+        Co2Passport p355 = passport(P355, "CO2-IND-2026-000355", KORBA, "Lignite boiler flue gas (unit 3)", CarbonOrigin.FOSSIL, "Amine capture (MEA)",
+                22.0, 18.0, 27.0, 500, 96.2, PhysicalState.LIQUEFIED, 18.0, -24.0,
+                imp(44, 160, 22, 13, 3, 16, 5400), "MTR-KRB-03", "Korba power station, Chhattisgarh", 22.35, 82.68, false,
+                VerificationStatus.PENDING, LabCertificateStatus.PENDING, null, null);
+        // A second COA that lapsed: the startup job flips it to EXPIRED and re-queues it at priority 5.
+        Co2Passport p356 = passport(P356, "CO2-IND-2026-000356", THAR, "Sulphur recovery unit tail gas", CarbonOrigin.FOSSIL, "Amine capture (MEA)",
+                12.0, 9.0, 15.0, 300, 95.6, PhysicalState.LIQUEFIED, 17.0, -25.0,
+                imp(55, 190, 34, 40, 9, 20, 5600), "MTR-BRM-07", "Barmer refinery, Rajasthan", 25.75, 71.38, false,
+                VerificationStatus.VERIFIED, LabCertificateStatus.ISSUED, now.minus(189, ChronoUnit.DAYS), now.minus(3, ChronoUnit.DAYS));
+        Co2Passport p357 = passport(P357, "CO2-IND-2026-000357", TARAPUR, "Ammonia synthesis purge gas (line 2)", CarbonOrigin.PROCESS, "Physical solvent (Selexol)",
+                26.0, 22.0, 31.0, 500, 99.1, PhysicalState.LIQUEFIED, 20.0, -23.0,
+                imp(10, 30, 5, 2, 1, 3, 700), "MTR-BOI-05", "Tarapur chemical complex, Maharashtra", 19.80, 72.75, true,
+                VerificationStatus.VERIFIED, LabCertificateStatus.ISSUED, now.minus(17, ChronoUnit.DAYS), now.plus(163, ChronoUnit.DAYS));
+        for (Co2Passport p : List.of(p350, p351, p352, p353, p354, p355, p356, p357)) {
+            audit.record(p.getEmitterId(), Role.EMITTER, "PASSPORT_CREATED", "Passport", p.getId(),
+                    AuditService.details("code", p.getPassportCode(), "totalVolumeTonnes", p.getTotalVolumeTonnes()));
+        }
+
+        // ---- Lab queue and history, split across the two accredited labs ----
+        verification(id(6020), VerificationType.PASSPORT_COA, p350, null, 3, VerificationRequestStatus.APPROVED, LAB, "COA issued; measured 99.4% CO2", now.minus(29, ChronoUnit.DAYS), now.minus(28, ChronoUnit.DAYS));
+        verification(id(6021), VerificationType.PASSPORT_COA, p351, null, 3, VerificationRequestStatus.APPROVED, EASTLAB, "COA issued; measured 93.8% CO2", now.minus(51, ChronoUnit.DAYS), now.minus(50, ChronoUnit.DAYS));
+        verification(id(6022), VerificationType.PASSPORT_COA, p352, null, 3, VerificationRequestStatus.APPROVED, LAB, "COA issued; measured 97.6% CO2", now.minus(26, ChronoUnit.DAYS), now.minus(25, ChronoUnit.DAYS));
+        verification(id(6023), VerificationType.PASSPORT_COA, p353, null, 3, VerificationRequestStatus.APPROVED, EASTLAB, "COA issued; measured 98.9% CO2", now.minus(11, ChronoUnit.DAYS), now.minus(10, ChronoUnit.DAYS));
+        verification(id(6024), VerificationType.PASSPORT_COA, p354, null, 3, VerificationRequestStatus.REJECTED, LAB,
+                "Rejected: measured 88.4% CO2 against a claimed 94.0%, with SOx an order of magnitude above the declared figure.", now.minus(30, ChronoUnit.DAYS), now.minus(28, ChronoUnit.DAYS));
+        verification(id(6025), VerificationType.PASSPORT_COA, p355, null, 2, VerificationRequestStatus.IN_REVIEW, LAB, "Samples received; GC-MS run in progress", now.minus(30, ChronoUnit.HOURS), null);
+        verification(id(6026), VerificationType.PASSPORT_COA, p356, null, 3, VerificationRequestStatus.APPROVED, LAB, "Previous COA cycle; due for re-test", now.minus(190, ChronoUnit.DAYS), now.minus(189, ChronoUnit.DAYS));
+        verification(id(6027), VerificationType.PASSPORT_COA, p357, null, 3, VerificationRequestStatus.APPROVED, EASTLAB, "COA issued; measured 99.1% CO2", now.minus(18, ChronoUnit.DAYS), now.minus(17, ChronoUnit.DAYS));
+        verification(id(6029), VerificationType.PASSPORT_COA, p351, null, 1, VerificationRequestStatus.QUEUED, null, "Routine half-yearly re-test; no dispute raised", now.minus(9, ChronoUnit.HOURS), null);
+        notifications.notify(SUNDARGARH, "VERIFICATION_REJECTED", "CO2-IND-2026-000354 failed its COA",
+                "The lab measured 88.4% CO2 against a claimed 94.0%. Fix the capture train and resubmit before listing this stream.", "VerificationRequest", id(6024));
+        notifications.notify(EASTLAB, "VERIFICATION_QUEUED", "Re-test requested on CO2-IND-2026-000351",
+                "Sundargarh Sponge Iron asked for the routine half-yearly re-test. Priority 1 - no listing is blocked.", "VerificationRequest", id(6029));
+        notifications.notify(LAB, "VERIFICATION_QUEUED", "New passport awaiting COA",
+                "CO2-IND-2026-000355 from Korba Valley Power Station is in review; the GC-MS run finishes today.", "VerificationRequest", id(6025));
+        audit.record(LAB, Role.LAB, "VERIFICATION_REJECTED", "VerificationRequest", id(6024),
+                AuditService.details("type", "PASSPORT_COA", "passport", "CO2-IND-2026-000354", "measuredConcentrationPct", 88.4));
+
+        // ---- Listings ----
+        // A second auction that is live the moment the demo starts.
+        Listing l16 = auction(L16, p352, ListingStatus.LIVE, 80, 3600, 100, now.minus(5, ChronoUnit.MINUTES), 45,
+                today.plusDays(4), today.plusDays(25), "Spot lot from the Korba capture train. Rising in ₹100 steps; last bid wins.", now.minus(2, ChronoUnit.DAYS));
+        Listing l17 = auction(L17, p350, ListingStatus.SCHEDULED, 25, 4400, 100, now.plus(25, ChronoUnit.MINUTES), 30,
+                today.plusDays(8), today.plusDays(28), "High-purity ammonia-plant CO2, 25 t spot lot.", now.minus(9, ChronoUnit.HOURS));
+        // Ran and closed, but the emitter has not awarded it yet - the ENDED state.
+        Listing l18 = auction(L18, p351, ListingStatus.ENDED, 30, 3300, 50, now.minus(2, ChronoUnit.HOURS), 30,
+                today.plusDays(3), today.plusDays(18), "Gaseous spot lot, collection from Rourkela.", now.minus(3, ChronoUnit.DAYS));
+        Listing l19 = listing(L19, p352, SaleMode.TENDER, ListingStatus.OPEN, 600, 3700, 96.0, null, today.plusDays(16), today.plusMonths(9), now.plus(9, ChronoUnit.DAYS),
+                "600 t of liquefied CO2 from a pipeline-served power station. Split awards welcome.", now.minus(6, ChronoUnit.DAYS));
+        Listing l20 = listing(L20, p353, SaleMode.TENDER, ListingStatus.OPEN, 350, 4050, 98.0, null, today.plusDays(22), today.plusMonths(8), now.plus(14, ChronoUnit.DAYS),
+                "Refinery-grade CO2 from the hydrogen unit. Suits fuel synthesis and food-grade buyers.", now.minus(4, ChronoUnit.DAYS));
+        Listing l21 = listing(L21, p350, SaleMode.TENDER, ListingStatus.OPEN, 200, 4500, 99.0, null, today.plusDays(10), today.plusMonths(6), now.plus(6, ChronoUnit.DAYS),
+                "99.4% purity, beverage-grade after a single polishing step. Small lots considered.", now.minus(3, ChronoUnit.DAYS));
+        Listing l22 = listing(L22, p351, SaleMode.TENDER, ListingStatus.AWARDED, 150, 3600, 93.0, null, today.minusDays(15), today.plusMonths(5), now.minus(18, ChronoUnit.DAYS),
+                "Gaseous CO2 for algae cultivation.", now.minus(35, ChronoUnit.DAYS));
+        Listing l23 = listing(L23, p352, SaleMode.TENDER, ListingStatus.AWARDED, 300, 3750, 96.0, null, today.plusDays(7), today.plusMonths(7), now.minus(5, ChronoUnit.DAYS),
+                "Awarded to a precast-concrete buyer in Telangana.", now.minus(20, ChronoUnit.DAYS));
+        // Closed after both proposals came in under the reserve - a real outcome worth showing.
+        Listing l24 = listing(L24, p353, SaleMode.TENDER, ListingStatus.CLOSED, 100, 4700, 98.0, 4500.0, today.minusMonths(1), today.plusMonths(3), now.minus(16, ChronoUnit.DAYS),
+                "Closed: both proposals came in below the ₹4500/t reserve.", now.minus(45, ChronoUnit.DAYS));
+        Listing l25 = listing(L25, p350, SaleMode.TENDER, ListingStatus.CANCELLED, 120, 4400, 99.0, null, today.plusDays(14), today.plusMonths(5), now.minus(7, ChronoUnit.DAYS),
+                "Cancelled: the purge-gas compressor was taken offline for an unplanned repair.", now.minus(21, ChronoUnit.DAYS));
+        Listing l26 = auction(L26, p353, ListingStatus.CANCELLED, 40, 4200, 100, now.minus(1, ChronoUnit.DAYS), 30,
+                today.plusDays(9), today.plusMonths(3), "Cancelled before it opened; the volume went to a long-term buyer instead.", now.minus(4, ChronoUnit.DAYS));
+        Listing l27 = listing(L27, p357, SaleMode.TENDER, ListingStatus.OPEN, 250, 4350, 99.0, null, today.plusDays(19), today.plusMonths(7), now.plus(11, ChronoUnit.DAYS),
+                "Line 2 purge gas, same specification as line 1. Monthly or bulk lifting both fine.", now.minus(1, ChronoUnit.DAYS));
+        Listing l28 = auction(L28, p352, ListingStatus.AWARDED, 50, 3500, 100, now.minus(5, ChronoUnit.DAYS), 45,
+                today.minusDays(3), today.plusMonths(3), "Spot lot (closed).", now.minus(6, ChronoUnit.DAYS));
+        // A second auction waiting to be awarded, so the ENDED state is never a single row.
+        Listing l29 = auction(L29, p357, ListingStatus.ENDED, 20, 4300, 100, now.minus(3, ChronoUnit.HOURS), 30,
+                today.plusDays(6), today.plusMonths(4), "Line 2 spot lot, collection from Boisar.", now.minus(2, ChronoUnit.DAYS));
+        l19.setDeliveryMonths(6); l19.setMonthlyTonnes(100.0); listings.save(l19);
+        l16.setCurrentPricePerTonne(3900.0); l16.setCurrentLeaderId(SYNFUEL); listings.save(l16);
+        l18.setCurrentPricePerTonne(3450.0); l18.setCurrentLeaderId(SPIRULINA); listings.save(l18);
+        l28.setCurrentPricePerTonne(3800.0); l28.setCurrentLeaderId(PRECAST); listings.save(l28);
+        l29.setCurrentPricePerTonne(4600.0); l29.setCurrentLeaderId(BEVGAS); listings.save(l29);
+        for (Listing l : List.of(l16, l17, l18, l19, l20, l21, l22, l23, l24, l25, l26, l27, l28, l29)) {
+            audit.record(l.getEmitterId(), Role.EMITTER, "LISTING_CREATED", "Listing", l.getId(),
+                    AuditService.details("mode", l.getMode().name(), "volumeTonnes", l.getVolumeTonnes(), "basePricePerTonne", l.getBasePricePerTonne()));
+        }
+        audit.record(TARAPUR, Role.EMITTER, "LISTING_CANCELLED", "Listing", L25,
+                AuditService.details("reason", "capture unit offline for repair", "releasedTonnes", 120));
+        audit.record(THAR, Role.EMITTER, "LISTING_CLOSED", "Listing", L24,
+                AuditService.details("reason", "all proposals below reserve", "reservePricePerTonne", 4500));
+
+        // ---- Auction ladders ----
+        bid(id(8010), L16, PRECAST, 3600, 80, now.minus(4, ChronoUnit.MINUTES));
+        bid(id(8011), L16, SYNFUEL, 3700, 80, now.minus(3, ChronoUnit.MINUTES));
+        bid(id(8012), L16, METHANOL, 3800, 80, now.minus(2, ChronoUnit.MINUTES));
+        bid(id(8013), L16, SYNFUEL, 3900, 80, now.minus(1, ChronoUnit.MINUTES));
+        bid(id(8014), L18, ALGAE, 3300, 30, now.minus(115, ChronoUnit.MINUTES));
+        bid(id(8015), L18, METHANOL, 3350, 30, now.minus(108, ChronoUnit.MINUTES));
+        bid(id(8016), L18, ALGAE, 3400, 30, now.minus(100, ChronoUnit.MINUTES));
+        bid(id(8017), L18, SPIRULINA, 3450, 30, now.minus(95, ChronoUnit.MINUTES));
+        bid(id(8018), L28, MALWA, 3500, 50, now.minus(5, ChronoUnit.DAYS).plus(4, ChronoUnit.MINUTES));
+        bid(id(8019), L28, PRECAST, 3650, 50, now.minus(5, ChronoUnit.DAYS).plus(12, ChronoUnit.MINUTES));
+        bid(id(8020), L28, PRECAST, 3800, 50, now.minus(5, ChronoUnit.DAYS).plus(26, ChronoUnit.MINUTES));
+        bid(id(8021), L29, SPIRULINA, 4300, 20, now.minus(175, ChronoUnit.MINUTES));
+        bid(id(8022), L29, BEVGAS, 4400, 20, now.minus(168, ChronoUnit.MINUTES));
+        bid(id(8023), L29, SPIRULINA, 4500, 20, now.minus(160, ChronoUnit.MINUTES));
+        bid(id(8024), L29, BEVGAS, 4600, 20, now.minus(155, ChronoUnit.MINUTES));
+        notifications.notify(KORBA, "BID_RECEIVED", "New bid on CO2-IND-2026-000352",
+                "A bidder raised the auction to ₹3900/t for 80 t.", "Listing", L16);
+        notifications.notify(METHANOL, "OUTBID", "You have been outbid on CO2-IND-2026-000352",
+                "The bid is now ₹3900/t. Bid ₹4000/t to lead again.", "Listing", L16);
+        notifications.notify(PRECAST, "OUTBID", "You have been outbid on CO2-IND-2026-000352",
+                "The bid is now ₹3900/t. Bid ₹4000/t to lead again.", "Listing", L16);
+        notifications.notify(SUNDARGARH, "AUCTION_ENDED", "Auction closed on CO2-IND-2026-000351",
+                "The 30 t lot ended at ₹3450/t after four bids. Award it to the leading bidder to create the agreement.", "Listing", L18);
+        notifications.notify(TARAPUR, "AUCTION_ENDED", "Auction closed on CO2-IND-2026-000357",
+                "The 20 t line-2 lot ended at ₹4600/t after four bids. Award it to the leading bidder to create the agreement.", "Listing", L29);
+
+        // ---- Proposals: every open tender above has competition ----
+        proposal(id(2020), l19, p352, SYNFUEL, 300, 96.0, 12, "Monthly by rail to Mathura", 3800, true, null, ProposalStatus.SUBMITTED, now.minus(5, ChronoUnit.DAYS));
+        proposal(id(2021), l19, p352, PRECAST, 250, 96.0, 6, "Fortnightly by road", 3750, true, null, ProposalStatus.SUBMITTED, now.minus(4, ChronoUnit.DAYS));
+        proposal(id(2022), l19, p352, CONCRETE, 600, 96.0, 4, "Single bulk lift", 3720, false, "Needs a 45-day collection window", ProposalStatus.SUBMITTED, now.minus(3, ChronoUnit.DAYS));
+        proposal(id(2023), l19, p352, ALGAE, 300, 96.0, 9, "Rail to Paradip", 3760, true, null, ProposalStatus.SUBMITTED, now.minus(2, ChronoUnit.DAYS));
+        proposal(id(2024), l19, p352, UREA, 200, 96.0, 12, "Monthly by rail", 3780, true, null, ProposalStatus.SUBMITTED, now.minus(30, ChronoUnit.HOURS));
+        proposal(id(2025), l19, p352, MALWA, 100, 96.0, 6, "Monthly by road", 3650, false, null, ProposalStatus.WITHDRAWN, now.minus(6, ChronoUnit.DAYS));
+        proposal(id(2026), l20, p353, METHANOL, 350, 98.0, 12, "Rail to Dahej", 4150, true, null, ProposalStatus.SUBMITTED, now.minus(3, ChronoUnit.DAYS));
+        proposal(id(2027), l20, p353, SYNFUEL, 200, 98.0, 9, "Monthly by rail", 4100, true, null, ProposalStatus.SUBMITTED, now.minus(40, ChronoUnit.HOURS));
+        proposal(id(2028), l20, p353, PRECAST, 150, 98.0, 6, "Road, fortnightly", 4080, true, null, ProposalStatus.SUBMITTED, now.minus(22, ChronoUnit.HOURS));
+        proposal(id(2029), l20, p353, UREA, 120, 98.0, 12, "Coastal shipping to Ratnagiri", 4150, true, null, ProposalStatus.SUBMITTED, now.minus(14, ChronoUnit.HOURS));
+        proposal(id(2030), l21, p350, BEVGAS, 120, 99.0, 12, "Weekly ISO tanks to Hosur", 4700, true, "Food-grade handling; ISBT certificate required", ProposalStatus.SUBMITTED, now.minus(2, ChronoUnit.DAYS));
+        proposal(id(2031), l21, p350, SPIRULINA, 80, 99.0, 6, "Monthly by road", 4600, true, null, ProposalStatus.SUBMITTED, now.minus(26, ChronoUnit.HOURS));
+        proposal(id(2032), l21, p350, MALWA, 80, 99.0, 6, "Monthly by road", 4400, false, null, ProposalStatus.SUBMITTED, now.minus(10, ChronoUnit.HOURS));
+        proposal(id(2033), l21, p350, GREENHOUSE, 60, 99.0, 9, "Monthly by road", 4500, true, null, ProposalStatus.SUBMITTED, now.minus(5, ChronoUnit.HOURS));
+        proposal(id(2034), l27, p357, UREA, 150, 99.0, 12, "Monthly by rail", 4400, true, null, ProposalStatus.SUBMITTED, now.minus(20, ChronoUnit.HOURS));
+        proposal(id(2035), l27, p357, BEVGAS, 100, 99.0, 6, "Weekly ISO tanks", 4450, true, null, ProposalStatus.SUBMITTED, now.minus(12, ChronoUnit.HOURS));
+        proposal(id(2036), l27, p357, CONCRETE, 200, 99.0, 4, "Bulk lift", 4300, false, null, ProposalStatus.SUBMITTED, now.minus(4, ChronoUnit.HOURS));
+        // More competition on the tenders the original seed left thin.
+        // L1 is deliberately left at its three proposals: the smoke test pins that count.
+        Listing l3 = listings.findById(L3).orElseThrow();
+        Listing l10 = listings.findById(L10).orElseThrow();
+        Listing l11 = listings.findById(L11).orElseThrow();
+        Co2Passport p344 = passports.findById(P344).orElseThrow();
+        Co2Passport p346 = passports.findById(P346).orElseThrow();
+        Co2Passport p347 = passports.findById(P347).orElseThrow();
+        proposal(id(2037), l27, p357, MALWA, 120, 99.0, 9, "Monthly by rail to Indore", 4350, true, null, ProposalStatus.SUBMITTED, now.minus(36, ChronoUnit.HOURS));
+        proposal(id(2038), l21, p350, PRECAST, 150, 99.0, 12, "Road, fortnightly", 4550, true, "Beverage-grade polishing not required", ProposalStatus.SUBMITTED, now.minus(18, ChronoUnit.HOURS));
+        proposal(id(2039), l3, p344, SYNFUEL, 400, 97.0, 12, "Rail to Mathura", 3850, true, null, ProposalStatus.SUBMITTED, now.minus(2, ChronoUnit.DAYS));
+        proposal(id(2040), l3, p344, PRECAST, 300, 97.0, 6, "Road, monthly", 3820, true, null, ProposalStatus.SUBMITTED, now.minus(28, ChronoUnit.HOURS));
+        proposal(id(2041), l3, p344, SPIRULINA, 200, 97.0, 9, "Rail to Coimbatore", 3830, true, null, ProposalStatus.SUBMITTED, now.minus(16, ChronoUnit.HOURS));
+        proposal(id(2042), l10, p346, SPIRULINA, 100, 94.0, 6, "Monthly by rail", 4250, true, null, ProposalStatus.SUBMITTED, now.minus(22, ChronoUnit.HOURS));
+        proposal(id(2043), l11, p347, BEVGAS, 150, 98.0, 12, "Weekly ISO tanks to Hosur", 4050, true, null, ProposalStatus.SUBMITTED, now.minus(15, ChronoUnit.HOURS));
+        proposal(id(2044), l11, p347, SYNFUEL, 200, 98.0, 9, "Rail to Mathura", 3980, true, null, ProposalStatus.SUBMITTED, now.minus(8, ChronoUnit.HOURS));
+        proposal(id(2049), l11, p347, MALWA, 100, 98.0, 6, "Monthly by road", 3880, false, null, ProposalStatus.WITHDRAWN, now.minus(3, ChronoUnit.DAYS));
+        // Rejected on the closed tender, awarded on the two awarded ones.
+        proposal(id(2045), l24, p353, MALWA, 100, 98.0, 6, "Monthly by road", 4200, false, null, ProposalStatus.REJECTED, now.minus(40, ChronoUnit.DAYS));
+        proposal(id(2046), l24, p353, CONCRETE, 100, 98.0, 4, "Bulk lift", 4300, false, null, ProposalStatus.REJECTED, now.minus(38, ChronoUnit.DAYS));
+        Proposal pr22 = proposal(id(2047), l22, p351, SPIRULINA, 150, 93.0, 5, "Rail to Coimbatore", 3600, true, null, ProposalStatus.AWARDED, now.minus(30, ChronoUnit.DAYS));
+        Proposal pr23 = proposal(id(2048), l23, p352, PRECAST, 300, 96.0, 7, "Road, fortnightly", 3800, true, null, ProposalStatus.AWARDED, now.minus(16, ChronoUnit.DAYS));
+        notifications.notify(KORBA, "PROPOSAL_RECEIVED", "Five proposals on CO2-IND-2026-000352",
+                "600 t tender: the combined partial bids are worth more than the single full-volume offer. Compare them on the tender page.", "Listing", L19);
+        notifications.notify(TARAPUR, "PROPOSAL_RECEIVED", "New tender proposal on CO2-IND-2026-000350",
+                "Palar Valley Beverage Gases (SILVER) offers ₹4700/t for 120 t.", "Listing", L21);
+        notifications.notify(THAR, "PROPOSAL_RECEIVED", "New tender proposal on CO2-IND-2026-000353",
+                "Gujarat Methanol Synthesis (GOLD) offers ₹4150/t for 350 t.", "Listing", L20);
+        notifications.notify(MALWA, "PROPOSAL_REJECTED", "Proposal not accepted on CO2-IND-2026-000353",
+                "The tender closed without an award: every offer was below the ₹4500/t reserve.", "Listing", L24);
+
+        // ---- Agreements ----
+        Agreement ay1 = agreement(id(3018), l22, pr22, null, SUNDARGARH, SPIRULINA, p351, SaleMode.TENDER, 150, 3600, AgreementStatus.ACTIVE,
+                today.minusDays(15), today.plusMonths(5), 5, null, 10.0, false, 10.0, PricingStructure.FIXED, now.minus(30, ChronoUnit.DAYS));
+        Agreement ay2 = agreement(id(3019), l23, pr23, null, KORBA, PRECAST, p352, SaleMode.TENDER, 300, 3800, AgreementStatus.PENDING_VERIFICATION,
+                today.plusDays(7), today.plusMonths(7), 7, null, 10.0, false, 10.0, PricingStructure.FIXED, now.minus(5, ChronoUnit.DAYS));
+        // Already picked up by a lab: the second IN_REVIEW row, so that filter is never a single line.
+        verification(id(6028), VerificationType.SALE_APPROVAL, p352, ay2, 4, VerificationRequestStatus.IN_REVIEW, LAB,
+                "Sale approval: 300 t of CO2-IND-2026-000352 to Warangal Precast Blocks. Sample drawn; results due tomorrow.", now.minus(5, ChronoUnit.DAYS), null);
+        verification(id(6031), VerificationType.SALE_APPROVAL, p351, ay1, 4, VerificationRequestStatus.APPROVED, EASTLAB,
+                "Sale approved; specification matched the Passport", now.minus(30, ChronoUnit.DAYS), now.minus(29, ChronoUnit.DAYS));
+        notifications.notify(PRECAST, "TENDER_AWARDED", "Tender awarded: CO2-IND-2026-000352",
+                "Korba Valley Power Station awarded you 300 t at ₹3800/t. The sale is queued for independent lab approval.", "Agreement", id(3019));
+        notifications.notify(KORBA, "VERIFICATION_CLAIMED", "Sale approval in review",
+                "National CO2 Testing Lab drew a sample against the 300 t sale on CO2-IND-2026-000352. Results are due tomorrow.", "VerificationRequest", id(6028));
+        notifications.notify(SPIRULINA, "TENDER_AWARDED", "Tender awarded: CO2-IND-2026-000351",
+                "Sundargarh Sponge Iron awarded you 150 t at ₹3600/t. The agreement is active; shipments can be scheduled.", "Agreement", id(3018));
+        audit.record(SUNDARGARH, Role.EMITTER, "LISTING_AWARDED", "Listing", L22, AuditService.details("proposal", id(2047), "agreement", id(3018), "volumeTonnes", 150));
+        audit.record(KORBA, Role.EMITTER, "LISTING_AWARDED", "Listing", L23, AuditService.details("proposal", id(2048), "agreement", id(3019), "volumeTonnes", 300));
+
+        // Auction winner on L28.
+        agreement(id(3031), l28, null, null, KORBA, PRECAST, p352, SaleMode.AUCTION, 50, 3800, AgreementStatus.ACTIVE,
+                today.minusDays(3), today.plusMonths(3), 1, null, 10.0, false, null, PricingStructure.FIXED, now.minus(5, ChronoUnit.DAYS));
+        notifications.notify(PRECAST, "AUCTION_WON", "Auction won: CO2-IND-2026-000352",
+                "You placed the last bid at ₹3800/t for 50 t (₹1,90,000 total). This purchase is binding.", "Agreement", id(3031));
+        audit.record(KORBA, Role.EMITTER, "AUCTION_WON", "Listing", L28,
+                AuditService.details("winner", PRECAST, "agreement", id(3031), "finalPricePerTonne", 3800, "volumeTonnes", 50, "bidCount", 3));
+
+        // A cancelled contract and a sale the lab turned down: both CANCELLED, for different reasons.
+        Agreement ay3 = agreement(id(3027), null, null, null, THAR, SYNFUEL, p353, SaleMode.CONTRACT, 300, 4000, AgreementStatus.CANCELLED,
+                today.minusMonths(5), today.minusMonths(2), 3, 100.0, 10.0, false, 10.0, PricingStructure.FIXED, now.minus(155, ChronoUnit.DAYS));
+        ay3.setCancelledByCompanyId(SYNFUEL);
+        ay3.setCancelReason("Synfuel unit commissioning slipped two quarters; the buyer released the volume rather than take-or-pay.");
+        ay3.setUpdatedAt(now.minus(110, ChronoUnit.DAYS));
+        agreements.save(ay3);
+        audit.record(SYNFUEL, Role.UTILIZER, "AGREEMENT_CANCELLED", "Agreement", id(3027),
+                AuditService.details("volumeTonnes", 300, "reason", "Buyer commissioning delayed"));
+        notifications.notify(THAR, "AGREEMENT_CANCELLED", "Contract cancelled by the buyer",
+                "Yamuna Synfuels cancelled a 300 t contract before expiry. The volume has been returned to free stock.", "Agreement", id(3027));
+
+        Agreement ay4 = agreement(id(3030), null, null, null, THAR, MALWA, p353, SaleMode.TENDER, 60, 4650, AgreementStatus.CANCELLED,
+                today.minusMonths(2), today.plusMonths(2), 4, null, 10.0, false, 10.0, PricingStructure.FIXED, now.minus(62, ChronoUnit.DAYS));
+        ay4.setCancelReason("Lab rejected the sale: the sampled specification did not match the Passport. Volume released, no trust penalty.");
+        ay4.setUpdatedAt(now.minus(59, ChronoUnit.DAYS));
+        agreements.save(ay4);
+        verification(id(6030), VerificationType.SALE_APPROVAL, p353, ay4, 4, VerificationRequestStatus.REJECTED, EASTLAB,
+                "Rejected: the delivered sample read 96.1% against the 98.9% on the Passport.", now.minus(61, ChronoUnit.DAYS), now.minus(59, ChronoUnit.DAYS));
+        audit.record(EASTLAB, Role.LAB, "VERIFICATION_REJECTED", "VerificationRequest", id(6030),
+                AuditService.details("type", "SALE_APPROVAL", "agreement", id(3030)));
+        notifications.notify(MALWA, "VERIFICATION_REJECTED", "Sale rejected by the lab",
+                "The sample on CO2-IND-2026-000353 did not match the Passport. The agreement was cancelled and no penalty applies to you.", "Agreement", id(3030));
+
+        // Completed history, spread over 20 months so the regulator's monthly curve has a shape.
+        agreement(id(3022), null, null, null, THAR, METHANOL, p353, SaleMode.TENDER, 400, 3900, AgreementStatus.COMPLETED,
+                today.minusMonths(13), today.minusMonths(7), 6, null, 10.0, false, null, PricingStructure.FIXED, now.minus(400, ChronoUnit.DAYS));
+        agreement(id(3023), null, null, null, TARAPUR, SPIRULINA, p350, SaleMode.TENDER, 400, 4400, AgreementStatus.COMPLETED,
+                today.minusMonths(8), today.minusMonths(5), 3, null, 10.0, false, null, PricingStructure.FIXED, now.minus(250, ChronoUnit.DAYS));
+        agreement(id(3024), null, null, null, SUNDARGARH, CONCRETE, p351, SaleMode.TENDER, 750, 3550, AgreementStatus.COMPLETED,
+                today.minusMonths(16), today.minusMonths(10), 6, null, 10.0, false, null, PricingStructure.FIXED, now.minus(490, ChronoUnit.DAYS));
+        agreement(id(3025), null, null, null, KORBA, UREA, p352, SaleMode.CONTRACT, 1100, 3650, AgreementStatus.COMPLETED,
+                today.minusMonths(12), today.minusMonths(6), 6, 183.33, 10.0, true, 10.0, PricingStructure.FIXED, now.minus(370, ChronoUnit.DAYS));
+        agreement(id(3026), null, null, null, KORBA, CONCRETE, p352, SaleMode.TENDER, 900, 3700, AgreementStatus.COMPLETED,
+                today.minusMonths(6), today.minusMonths(3), 3, null, 10.0, false, null, PricingStructure.FIXED, now.minus(190, ChronoUnit.DAYS));
+        agreement(id(3028), null, null, null, DECCANREF, SPIRULINA, p347, SaleMode.TENDER, 1200, 3800, AgreementStatus.COMPLETED,
+                today.minusMonths(18), today.minusMonths(12), 6, null, 10.0, false, null, PricingStructure.FIXED, now.minus(550, ChronoUnit.DAYS));
+        agreement(id(3029), null, null, null, KORBA, METHANOL, p352, SaleMode.CONTRACT, 2600, 3600, AgreementStatus.COMPLETED,
+                today.minusMonths(20), today.minusMonths(14), 6, 433.33, 10.0, true, 10.0, PricingStructure.FIXED, now.minus(610, ChronoUnit.DAYS));
+
+        // The negotiated contracts have to exist before the shipments that run against them.
+        seedNegotiationThreads(now, today);
+        seedWiderShipments(now, today);
+
+        // ---- Allocation: only OPEN/SCHEDULED/LIVE listings and live agreements hold volume ----
+        // 350 (800 t): L21 200 + L17 auction 25 + negotiated contract 240 = 465 locked, 335 free.
+        // (L25 was cancelled, so its 120 t went back to free stock.)
+        p350.setAllocatedTonnes(465); passports.save(p350);
+        // 351 (600 t): L18 auction 30 + active agreement 150 = 180 locked.
+        p351.setAllocatedTonnes(180); passports.save(p351);
+        // 352 (2000 t): L16 80 + L19 600 + awaiting-lab 300 + auction win 50 + contract 600 = 1630 locked.
+        p352.setAllocatedTonnes(1630); passports.save(p352);
+        // 353 (900 t): L20 350 only; the closed, cancelled and lab-rejected deals all released theirs.
+        p353.setAllocatedTonnes(350); passports.save(p353);
+        // 357 (500 t): L27 250 + the ended L29 auction 20 = 270 locked.
+        p357.setAllocatedTonnes(270); passports.save(p357);
+        // A rejected, an in-review and a lapsed passport can hold nothing.
+        p354.setAllocatedTonnes(0); passports.save(p354);
+        p355.setAllocatedTonnes(0); passports.save(p355);
+        p356.setAllocatedTonnes(0); passports.save(p356);
+
+        // ---- A third forecast, on the busiest passport ----
+        OutputForecast f3 = new OutputForecast();
+        f3.setId(id(7003)); f3.setPassportId(P352); f3.setPeriodStart(today.plusDays(35)); f3.setPeriodEnd(today.plusDays(44));
+        f3.setExpectedTonnesPerDay(40); f3.setReason("Unit 2 turbine overhaul");
+        forecasts.save(f3);
+        int notified3 = passportService.notifyShortfall(f3, p352);
+        audit.record(KORBA, Role.EMITTER, "FORECAST_ADDED", "Passport", P352,
+                AuditService.details("expectedTonnesPerDay", 40, "utilizersNotified", notified3));
+
+        // Emitter badges band on cumulative tonnes sold, so re-read them now the agreements exist.
+        trust.refreshBadge(TARAPUR, SUNDARGARH, KORBA, THAR, DECCANREF);
+
+        notifications.notify(REGULATOR, "COMPLIANCE_ALERT", "Reconciliation failures across three lanes",
+                "A weight gap on Rourkela → Coimbatore and a meter mismatch on Korba → Mathura joined the two flagged runs already open. Drill into each company for the loading and delivery records.", "Company", KORBA);
+        notifications.notify(REGULATOR, "COMPLIANCE_ALERT", "A passport failed its Certificate of Analysis",
+                "CO2-IND-2026-000354 from Sundargarh Sponge Iron measured 88.4% CO2 against a claimed 94.0%. No volume was ever listed against it.", "Company", SUNDARGARH);
+        seedPendingSignups();
+
+        notifications.notify(ADMIN, "PLATFORM_SUMMARY", "Demo dataset loaded",
+                "30 companies across 12 states, 16 CO2 Passports, 28 listings and 10 negotiation threads are live. Every workflow state has at least two examples.", "Company", ADMIN);
+    }
+
+    // =====================================================================================
+    // Approvals queue
+    // -------------------------------------------------------------------------------------
+    // Six more sign-ups waiting on the admin, on top of Bharat Bio-CO2 Ltd and Coastal Carbon
+    // Recovery, spread across four roles and six states the rest of the seed does not use.
+    // They are deliberately left un-actioned: approving or rejecting them is the demo.
+    // Each account is real, so it starts working the moment the admin approves the company -
+    // until then AuthService refuses the login with "Company approval pending", by design.
+    // =====================================================================================
+    private void seedPendingSignups() {
+        pendingSignup(PARASNATH, "Parasnath Coke & Chemicals", Role.EMITTER, Sector.STEEL, "Dhanbad", "Jharkhand",
+                23.80, 86.43, "parasnath@carbon.local", "Anirban Ghosh", 13,
+                "Coke-oven gas, 35 t/day claimed. Oldest item in the queue - the site visit is still outstanding.");
+        pendingSignup(BRAHMAPUTRA, "Brahmaputra Petro Refining", Role.EMITTER, Sector.REFINERY, "Dibrugarh", "Assam",
+                27.47, 94.91, "brahmaputra@carbon.local", "Jyotirmoy Baruah", 9,
+                "Hydrogen-unit off-gas at 99% purity. Registration papers received; awaiting the capacity call.");
+        pendingSignup(SUNDARBAN, "Sundarban Algal Biotech", Role.UTILIZER, Sector.ALGAE, "Kolkata", "West Bengal",
+                22.57, 88.36, "sundarban@carbon.local", "Rupa Chatterjee", 6,
+                "Open-pond algae cultivation, 3,000 t/year demand. First buyer from the east coast.");
+        pendingSignup(DOABA, "Doaba Protected Farms", Role.UTILIZER, Sector.GREENHOUSE, "Jalandhar", "Punjab",
+                31.33, 75.58, "doaba@carbon.local", "Harpreet Sandhu", 4,
+                "Poly-house enrichment across 40 acres. Wants a winter-season offtake.");
+        pendingSignup(GTCRYO, "Grand Trunk Cryo Logistics", Role.TRANSPORT, Sector.LOGISTICS, "Ambala", "Haryana",
+                30.38, 76.78, "gtcryo@carbon.local", "Vikram Chaudhary", 2,
+                "Eight cryogenic tankers on the northern corridor. Fleet documents attached.");
+        pendingSignup(HIMALAB, "Himalayan Gas Testing Services", Role.LAB, Sector.LAB, "Dehradun", "Uttarakhand",
+                30.32, 78.03, "himalab@carbon.local", "Dr. Neha Rawat", 1,
+                "NABL ISO/IEC 17025 applied for. Newest application - accreditation certificate still to be checked.");
+    }
+
+    /**
+     * One sign-up still waiting on the admin: creates the company and its login, ages the
+     * registration so the queue has a believable order, and raises both notifications - one to
+     * the admin who has to act, one to the applicant who is waiting.
+     */
+    private void pendingSignup(UUID id, String name, Role role, Sector sector, String city, String state,
+                               double lat, double lng, String email, String contact, int daysAgo, String note) {
+        company(id, name, role, sector, city, state, lat, lng, email, contact, CompanyStatus.PENDING);
+        companies.findById(id).ifPresent(c -> {
+            c.setCreatedAt(Instant.now().minus(daysAgo, ChronoUnit.DAYS));
+            companies.save(c);
+        });
+        trust.getOrCreate(id);
+        notifications.notify(ADMIN, "SIGNUP_PENDING", "New sign-up awaiting verification",
+                String.format("%s registered as %s from %s, %s. %s Verify the company (form review + call/visit) before approving.",
+                        name, role.name(), city, state, note), "Company", id);
+        notifications.notify(id, "SIGNUP_PENDING", "Your registration is under review",
+                String.format("Thanks for registering %s. The platform team verifies every new company before it can trade; you will be notified as soon as the review is done.",
+                        name), "Company", id);
+        audit.record(id, role, "COMPANY_REGISTERED", "Company", id,
+                AuditService.details("name", name, "role", role.name(), "city", city, "state", state));
+    }
+
+    /** Shipments and carrier offers for the wider set: all five states, all four flag rules, four carriers. */
+    private void seedWiderShipments(Instant now, LocalDate today) {
+        double rklToCbe = GeoUtil.distanceKm(22.26, 84.85, 11.02, 76.96);
+        double krbToMtr = GeoUtil.distanceKm(22.35, 82.68, 27.49, 77.67);
+        double boiToHos = GeoUtil.distanceKm(19.80, 72.75, 12.74, 77.83);
+        double angToPdp = GeoUtil.distanceKm(20.84, 85.10, 20.32, 86.61);
+        double satToRtg = GeoUtil.distanceKm(24.57, 80.83, 16.99, 73.30);
+        double puneHop = GeoUtil.distanceKm(22.26, 84.85, 18.52, 73.86);
+        double hydHop = GeoUtil.distanceKm(22.35, 82.68, 17.38, 78.49);
+
+        // 1. Weight gap only: same seal, matching meter, but 2.4 t of 45 never arrived.
+        Shipment y1 = shipment(id(5015), id(3018), SAHYADRI, TransportMode.RAIL, rklToCbe, 45,
+                22.26, 84.85, 11.02, 76.96, now.minus(11, ChronoUnit.DAYS));
+        y1.setSealNumber("SEAL-6204"); y1.setLoadedWeightTonnes(45.0); y1.setLoadMeterReading(50000.0);
+        y1.setLoadSamplePurityPct(93.8); y1.setLoadedAt(now.minus(10, ChronoUnit.DAYS));
+        y1.setDeliverySealNumber("SEAL-6204"); y1.setDeliveredWeightTonnes(42.6); y1.setDeliveryMeterReading(50045.0);
+        y1.setDeliverySamplePurityPct(93.7); y1.setDeliveredAt(now.minus(8, ChronoUnit.DAYS));
+        y1.setFlags(ReconciliationRules.evaluate(new ReconciliationRules.Input(
+                "SEAL-6204", "SEAL-6204", 45.0, 42.6, 93.8, 93.7, 50000.0, 50045.0, 2.0)));
+        y1.setStatus(y1.getFlags().isEmpty() ? ShipmentStatus.DELIVERED : ShipmentStatus.FLAGGED);
+        y1.setTransportCost(rklToCbe * 45 * 2.5 + 15000);
+        shipments.save(y1);
+        transportOffer(id(5120), id(5015), SAHYADRI, TransportOfferStatus.ACCEPTED, puneHop, y1.getTransportCost(), now.minus(11, ChronoUnit.DAYS));
+        audit.record(SPIRULINA, Role.UTILIZER, "SHIPMENT_FLAGGED", "Shipment", id(5015),
+                AuditService.details("loadedWeightTonnes", 45.0, "deliveredWeightTonnes", 42.6, "flags", y1.getFlags()));
+        notifications.notify(SUNDARGARH, "SHIPMENT_FLAGGED", "Shipment flagged on delivery",
+                "45 t left Rourkela and 42.6 t arrived at Coimbatore, a 5.3% gap against a 2% tolerance. The seal was intact, so the loss is in the rail leg.", "Shipment", id(5015));
+        notifications.notify(SAHYADRI, "SHIPMENT_FLAGGED", "Your delivery was flagged",
+                "A 5.3% weight gap on the Rourkela → Coimbatore run. The lab has been notified.", "Shipment", id(5015));
+
+        // 2. Meter mismatch only: the delivery meter says 40 t moved but the weighbridge said 30.
+        Shipment y2 = shipment(id(5016), id(3021), DECTRANS, TransportMode.RAIL, krbToMtr, 30,
+                22.35, 82.68, 27.49, 77.67, now.minus(9, ChronoUnit.DAYS));
+        y2.setSealNumber("SEAL-6318"); y2.setLoadedWeightTonnes(30.0); y2.setLoadMeterReading(61000.0);
+        y2.setLoadSamplePurityPct(97.6); y2.setLoadedAt(now.minus(8, ChronoUnit.DAYS));
+        y2.setDeliverySealNumber("SEAL-6318"); y2.setDeliveredWeightTonnes(29.7); y2.setDeliveryMeterReading(61040.0);
+        y2.setDeliverySamplePurityPct(97.4); y2.setDeliveredAt(now.minus(6, ChronoUnit.DAYS));
+        y2.setFlags(ReconciliationRules.evaluate(new ReconciliationRules.Input(
+                "SEAL-6318", "SEAL-6318", 30.0, 29.7, 97.6, 97.4, 61000.0, 61040.0, 2.0)));
+        y2.setStatus(y2.getFlags().isEmpty() ? ShipmentStatus.DELIVERED : ShipmentStatus.FLAGGED);
+        y2.setTransportCost(krbToMtr * 30 * 2.5 + 15000);
+        shipments.save(y2);
+        transportOffer(id(5121), id(5016), DECTRANS, TransportOfferStatus.ACCEPTED, hydHop, y2.getTransportCost(), now.minus(9, ChronoUnit.DAYS));
+        audit.record(SYNFUEL, Role.UTILIZER, "SHIPMENT_FLAGGED", "Shipment", id(5016),
+                AuditService.details("loadMeterReading", 61000.0, "deliveryMeterReading", 61040.0, "flags", y2.getFlags()));
+        notifications.notify(KORBA, "SHIPMENT_FLAGGED", "Shipment flagged on delivery",
+                "The meters across the Korba → Mathura run differ by 40 t while the weighbridge recorded 30 t. Reconciliation failed on the meter reading.", "Shipment", id(5016));
+
+        // 3-5. Clean deliveries, so the flagged ones are the exception rather than the rule.
+        Shipment y3 = shipment(id(5017), id(3020), SAHYADRI, TransportMode.TRUCK, boiToHos, 20,
+                19.80, 72.75, 12.74, 77.83, now.minus(16, ChronoUnit.DAYS));
+        y3.setSealNumber("SEAL-6401"); y3.setLoadedWeightTonnes(20.0); y3.setLoadMeterReading(30100.0);
+        y3.setLoadSamplePurityPct(99.4); y3.setLoadedAt(now.minus(15, ChronoUnit.DAYS));
+        y3.setDeliverySealNumber("SEAL-6401"); y3.setDeliveredWeightTonnes(19.8); y3.setDeliveryMeterReading(30120.0);
+        y3.setDeliverySamplePurityPct(99.3); y3.setDeliveredAt(now.minus(14, ChronoUnit.DAYS));
+        y3.setFlags(ReconciliationRules.evaluate(new ReconciliationRules.Input(
+                "SEAL-6401", "SEAL-6401", 20.0, 19.8, 99.4, 99.3, 30100.0, 30120.0, 2.0)));
+        y3.setStatus(y3.getFlags().isEmpty() ? ShipmentStatus.DELIVERED : ShipmentStatus.FLAGGED);
+        y3.setTransportCost(boiToHos * 20 * 4.0 + 5000);
+        shipments.save(y3);
+        transportOffer(id(5122), id(5017), SAHYADRI, TransportOfferStatus.ACCEPTED, GeoUtil.distanceKm(19.80, 72.75, 18.52, 73.86), y3.getTransportCost(), now.minus(16, ChronoUnit.DAYS));
+        transportOffer(id(5123), id(5017), GUJTRANS, TransportOfferStatus.REJECTED, GeoUtil.distanceKm(19.80, 72.75, 22.47, 70.06), null, now.minus(16, ChronoUnit.DAYS));
+        audit.record(BEVGAS, Role.UTILIZER, "SHIPMENT_DELIVERED", "Shipment", id(5017),
+                AuditService.details("deliverySeal", "SEAL-6401", "deliveredWeightTonnes", 19.8, "flags", y3.getFlags()));
+        notifications.notify(BEVGAS, "SHIPMENT_DELIVERED", "Delivery reconciled",
+                "20 t from Boisar arrived at Hosur with the seal intact and purity within tolerance. Nothing to action.", "Shipment", id(5017));
+
+        Shipment y4 = shipment(id(5018), id(3021), DECTRANS, TransportMode.RAIL, krbToMtr, 50,
+                22.35, 82.68, 27.49, 77.67, now.minus(28, ChronoUnit.DAYS));
+        y4.setSealNumber("SEAL-6290"); y4.setLoadedWeightTonnes(50.0); y4.setLoadMeterReading(60400.0);
+        y4.setLoadSamplePurityPct(97.6); y4.setLoadedAt(now.minus(27, ChronoUnit.DAYS));
+        y4.setDeliverySealNumber("SEAL-6290"); y4.setDeliveredWeightTonnes(49.4); y4.setDeliveryMeterReading(60450.0);
+        y4.setDeliverySamplePurityPct(97.5); y4.setDeliveredAt(now.minus(25, ChronoUnit.DAYS));
+        y4.setFlags(ReconciliationRules.evaluate(new ReconciliationRules.Input(
+                "SEAL-6290", "SEAL-6290", 50.0, 49.4, 97.6, 97.5, 60400.0, 60450.0, 2.0)));
+        y4.setStatus(y4.getFlags().isEmpty() ? ShipmentStatus.DELIVERED : ShipmentStatus.FLAGGED);
+        y4.setTransportCost(krbToMtr * 50 * 2.5 + 15000);
+        shipments.save(y4);
+        transportOffer(id(5124), id(5018), DECTRANS, TransportOfferStatus.ACCEPTED, hydHop, y4.getTransportCost(), now.minus(28, ChronoUnit.DAYS));
+
+        Shipment y5 = shipment(id(5025), id(3010), DECTRANS, TransportMode.RAIL, satToRtg, 35,
+                24.57, 80.83, 16.99, 73.30, now.minus(35, ChronoUnit.DAYS));
+        y5.setSealNumber("SEAL-6033"); y5.setLoadedWeightTonnes(35.0); y5.setLoadMeterReading(40200.0);
+        y5.setLoadSamplePurityPct(95.9); y5.setLoadedAt(now.minus(34, ChronoUnit.DAYS));
+        y5.setDeliverySealNumber("SEAL-6033"); y5.setDeliveredWeightTonnes(34.7); y5.setDeliveryMeterReading(40235.0);
+        y5.setDeliverySamplePurityPct(95.8); y5.setDeliveredAt(now.minus(32, ChronoUnit.DAYS));
+        y5.setFlags(ReconciliationRules.evaluate(new ReconciliationRules.Input(
+                "SEAL-6033", "SEAL-6033", 35.0, 34.7, 95.9, 95.8, 40200.0, 40235.0, 2.0)));
+        y5.setStatus(y5.getFlags().isEmpty() ? ShipmentStatus.DELIVERED : ShipmentStatus.FLAGGED);
+        y5.setTransportCost(satToRtg * 35 * 2.5 + 15000);
+        shipments.save(y5);
+        transportOffer(id(5134), id(5025), DECTRANS, TransportOfferStatus.ACCEPTED, GeoUtil.distanceKm(24.57, 80.83, 17.38, 78.49), y5.getTransportCost(), now.minus(35, ChronoUnit.DAYS));
+        transportOffer(id(5135), id(5025), SAHYADRI, TransportOfferStatus.REJECTED, GeoUtil.distanceKm(24.57, 80.83, 18.52, 73.86), null, now.minus(35, ChronoUnit.DAYS));
+
+        // 6. Own transport: the buyer collected it themselves, so no carrier offer exists.
+        Shipment y6 = shipment(id(5022), A_L4_ALGAE, null, TransportMode.TRUCK, angToPdp, 30,
+                20.84, 85.10, 20.32, 86.61, now.minus(40, ChronoUnit.DAYS));
+        y6.setOwnTransport(true);
+        y6.setSealNumber("SEAL-5912"); y6.setLoadedWeightTonnes(30.0); y6.setLoadMeterReading(119800.0);
+        y6.setLoadSamplePurityPct(94.5); y6.setLoadedAt(now.minus(39, ChronoUnit.DAYS));
+        y6.setDeliverySealNumber("SEAL-5912"); y6.setDeliveredWeightTonnes(29.7); y6.setDeliveryMeterReading(119830.0);
+        y6.setDeliverySamplePurityPct(94.4); y6.setDeliveredAt(now.minus(38, ChronoUnit.DAYS));
+        y6.setFlags(ReconciliationRules.evaluate(new ReconciliationRules.Input(
+                "SEAL-5912", "SEAL-5912", 30.0, 29.7, 94.5, 94.4, 119800.0, 119830.0, 2.0)));
+        y6.setStatus(y6.getFlags().isEmpty() ? ShipmentStatus.DELIVERED : ShipmentStatus.FLAGGED);
+        y6.setTransportCost(angToPdp * 30 * 4.0 + 5000);
+        shipments.save(y6);
+        audit.record(ALGAE, Role.UTILIZER, "SHIPMENT_DELIVERED", "Shipment", id(5022),
+                AuditService.details("ownTransport", true, "deliveredWeightTonnes", 29.7, "flags", y6.getFlags()));
+
+        // 7-8. In transit right now.
+        Shipment y7 = shipment(id(5019), id(3020), SAHYADRI, TransportMode.TRUCK, boiToHos, 20,
+                19.80, 72.75, 12.74, 77.83, now.minus(2, ChronoUnit.DAYS));
+        y7.setSealNumber("SEAL-6488"); y7.setLoadedWeightTonnes(20.0); y7.setLoadMeterReading(30460.0);
+        y7.setLoadSamplePurityPct(99.4); y7.setLoadedAt(now.minus(30, ChronoUnit.HOURS));
+        y7.setStatus(ShipmentStatus.IN_TRANSIT);
+        y7.setTransportCost(boiToHos * 20 * 4.0 + 5000);
+        shipments.save(y7);
+        transportOffer(id(5125), id(5019), SAHYADRI, TransportOfferStatus.ACCEPTED, GeoUtil.distanceKm(19.80, 72.75, 18.52, 73.86), y7.getTransportCost(), now.minus(2, ChronoUnit.DAYS));
+        audit.record(TARAPUR, Role.EMITTER, "SHIPMENT_LOADED", "Shipment", id(5019), AuditService.details("seal", "SEAL-6488", "loadedWeightTonnes", 20.0));
+
+        Shipment y8 = shipment(id(5024), id(3018), SAHYADRI, TransportMode.RAIL, rklToCbe, 45,
+                22.26, 84.85, 11.02, 76.96, now.minus(3, ChronoUnit.DAYS));
+        y8.setSealNumber("SEAL-6512"); y8.setLoadedWeightTonnes(45.0); y8.setLoadMeterReading(50210.0);
+        y8.setLoadSamplePurityPct(93.8); y8.setLoadedAt(now.minus(2, ChronoUnit.DAYS));
+        y8.setStatus(ShipmentStatus.IN_TRANSIT);
+        y8.setTransportCost(rklToCbe * 45 * 2.5 + 15000);
+        shipments.save(y8);
+        transportOffer(id(5133), id(5024), SAHYADRI, TransportOfferStatus.ACCEPTED, puneHop, y8.getTransportCost(), now.minus(3, ChronoUnit.DAYS));
+
+        // 9-10. Accepted but not yet loaded.
+        Shipment y9 = shipment(id(5020), id(3018), SAHYADRI, TransportMode.RAIL, rklToCbe, 45,
+                22.26, 84.85, 11.02, 76.96, now.minus(14, ChronoUnit.HOURS));
+        y9.setStatus(ShipmentStatus.ACCEPTED);
+        y9.setTransportCost(rklToCbe * 45 * 2.5 + 15000);
+        shipments.save(y9);
+        transportOffer(id(5126), id(5020), SAHYADRI, TransportOfferStatus.ACCEPTED, puneHop, y9.getTransportCost(), now.minus(14, ChronoUnit.HOURS));
+        transportOffer(id(5127), id(5020), DECTRANS, TransportOfferStatus.EXPIRED, hydHop, null, now.minus(20, ChronoUnit.HOURS));
+        notifications.notify(SUNDARGARH, "TRANSPORT_ACCEPTED", "A carrier accepted your shipment",
+                "Sahyadri Cryo Carriers accepted the Rourkela → Coimbatore run and will collect tomorrow.", "Shipment", id(5020));
+
+        Shipment y10 = shipment(id(5023), A_L4_ALGAE, ODTRANS, TransportMode.TRUCK, angToPdp, 35,
+                20.84, 85.10, 20.32, 86.61, now.minus(8, ChronoUnit.HOURS));
+        y10.setStatus(ShipmentStatus.ACCEPTED);
+        y10.setTransportCost(angToPdp * 35 * 4.0 + 5000);
+        shipments.save(y10);
+        transportOffer(id(5131), id(5023), ODTRANS, TransportOfferStatus.ACCEPTED, GeoUtil.distanceKm(20.84, 85.10, 20.46, 85.88), y10.getTransportCost(), now.minus(8, ChronoUnit.HOURS));
+        transportOffer(id(5132), id(5023), GUJTRANS, TransportOfferStatus.EXPIRED, GeoUtil.distanceKm(20.84, 85.10, 22.47, 70.06), null, now.minus(9, ChronoUnit.HOURS));
+        notifications.notify(STEEL, "TRANSPORT_ACCEPTED", "A carrier accepted your shipment",
+                "East Coast Gas Carriers accepted the Angul → Paradip run for 35 t.", "Shipment", id(5023));
+
+        // 11-12. Advertised and still unclaimed, so each carrier portal has something to act on.
+        Shipment y11 = shipment(id(5021), id(3021), null, TransportMode.RAIL, krbToMtr, 50,
+                22.35, 82.68, 27.49, 77.67, now.minus(4, ChronoUnit.HOURS));
+        y11.setStatus(ShipmentStatus.REQUESTED);
+        y11.setTransportCost(krbToMtr * 50 * 2.5 + 15000);
+        shipments.save(y11);
+        transportOffer(id(5128), id(5021), DECTRANS, TransportOfferStatus.NOTIFIED, hydHop, null, now.minus(4, ChronoUnit.HOURS));
+        transportOffer(id(5129), id(5021), SAHYADRI, TransportOfferStatus.NOTIFIED, GeoUtil.distanceKm(22.35, 82.68, 18.52, 73.86), null, now.minus(4, ChronoUnit.HOURS));
+        transportOffer(id(5130), id(5021), ODTRANS, TransportOfferStatus.REJECTED, GeoUtil.distanceKm(22.35, 82.68, 20.46, 85.88), null, now.minus(3, ChronoUnit.HOURS));
+        notifications.notify(DECTRANS, "TRANSPORT_REQUEST", "Shipment request near you",
+                String.format("50 t of LIQUEFIED CO2 by RAIL, Korba → Mathura (%.0f km). Estimated ₹%.0f. Accept or reject.", krbToMtr, y11.getTransportCost()), "Shipment", id(5021));
+        notifications.notify(SAHYADRI, "TRANSPORT_REQUEST", "Shipment request near you",
+                String.format("50 t of LIQUEFIED CO2 by RAIL, Korba → Mathura (%.0f km). Estimated ₹%.0f. Accept or reject.", krbToMtr, y11.getTransportCost()), "Shipment", id(5021));
+        audit.record(KORBA, Role.EMITTER, "SHIPMENT_REQUESTED", "Shipment", id(5021),
+                AuditService.details("agreement", id(3021), "volumeTonnes", 50, "mode", "RAIL", "providersNotified", 3));
+
+        Shipment y12 = shipment(id(5026), id(3020), null, TransportMode.TRUCK, boiToHos, 20,
+                19.80, 72.75, 12.74, 77.83, now.minus(2, ChronoUnit.HOURS));
+        y12.setStatus(ShipmentStatus.REQUESTED);
+        y12.setTransportCost(boiToHos * 20 * 4.0 + 5000);
+        shipments.save(y12);
+        transportOffer(id(5136), id(5026), SAHYADRI, TransportOfferStatus.NOTIFIED, GeoUtil.distanceKm(19.80, 72.75, 18.52, 73.86), null, now.minus(2, ChronoUnit.HOURS));
+        transportOffer(id(5137), id(5026), GUJTRANS, TransportOfferStatus.NOTIFIED, GeoUtil.distanceKm(19.80, 72.75, 22.47, 70.06), null, now.minus(2, ChronoUnit.HOURS));
+        transportOffer(id(5138), id(5026), DECTRANS, TransportOfferStatus.EXPIRED, GeoUtil.distanceKm(19.80, 72.75, 17.38, 78.49), null, now.minus(2, ChronoUnit.HOURS));
+        notifications.notify(SAHYADRI, "TRANSPORT_REQUEST", "Shipment request near you",
+                String.format("20 t of LIQUEFIED CO2 by TRUCK, Boisar → Hosur (%.0f km). Estimated ₹%.0f. Accept or reject.", boiToHos, y12.getTransportCost()), "Shipment", id(5026));
+        notifications.notify(GUJTRANS, "TRANSPORT_REQUEST", "Shipment request near you",
+                String.format("20 t of LIQUEFIED CO2 by TRUCK, Boisar → Hosur (%.0f km). Estimated ₹%.0f. Accept or reject.", boiToHos, y12.getTransportCost()), "Shipment", id(5026));
+        audit.record(TARAPUR, Role.EMITTER, "SHIPMENT_REQUESTED", "Shipment", id(5026),
+                AuditService.details("agreement", id(3020), "volumeTonnes", 20, "mode", "TRUCK", "providersNotified", 3));
+
+        // 13-15. Porbandar lane. Without these the cement emitter - the headline demo account -
+        // signs in to an empty shipments page, because both of its deals are already finished.
+        double pbrToDahej = GeoUtil.distanceKm(21.64, 69.61, 21.70, 72.57);
+        double pbrToRajkot = GeoUtil.distanceKm(21.64, 69.61, 22.30, 70.80);
+        double jamHop = GeoUtil.distanceKm(21.64, 69.61, 22.47, 70.06);
+
+        Shipment y13 = shipment(id(5027), A_COMPLETED, GUJTRANS, TransportMode.TRUCK, pbrToDahej, 70,
+                21.64, 69.61, 21.70, 72.57, now.minus(130, ChronoUnit.DAYS));
+        y13.setSealNumber("SEAL-4410"); y13.setLoadedWeightTonnes(70.0); y13.setLoadMeterReading(70200.0);
+        y13.setLoadSamplePurityPct(96.8); y13.setLoadedAt(now.minus(129, ChronoUnit.DAYS));
+        y13.setDeliverySealNumber("SEAL-4410"); y13.setDeliveredWeightTonnes(69.3); y13.setDeliveryMeterReading(70270.0);
+        y13.setDeliverySamplePurityPct(96.7); y13.setDeliveredAt(now.minus(128, ChronoUnit.DAYS));
+        y13.setFlags(ReconciliationRules.evaluate(new ReconciliationRules.Input(
+                "SEAL-4410", "SEAL-4410", 70.0, 69.3, 96.8, 96.7, 70200.0, 70270.0, 2.0)));
+        y13.setStatus(y13.getFlags().isEmpty() ? ShipmentStatus.DELIVERED : ShipmentStatus.FLAGGED);
+        y13.setTransportCost(pbrToDahej * 70 * 4.0 + 5000);
+        shipments.save(y13);
+        transportOffer(id(5141), id(5027), GUJTRANS, TransportOfferStatus.ACCEPTED, jamHop, y13.getTransportCost(), now.minus(130, ChronoUnit.DAYS));
+        audit.record(METHANOL, Role.UTILIZER, "SHIPMENT_DELIVERED", "Shipment", id(5027),
+                AuditService.details("deliverySeal", "SEAL-4410", "deliveredWeightTonnes", 69.3, "flags", y13.getFlags()));
+
+        Shipment y14 = shipment(id(5028), A_COMPLETED, GUJTRANS, TransportMode.TRUCK, pbrToDahej, 65,
+                21.64, 69.61, 21.70, 72.57, now.minus(100, ChronoUnit.DAYS));
+        y14.setSealNumber("SEAL-4477"); y14.setLoadedWeightTonnes(65.0); y14.setLoadMeterReading(70900.0);
+        y14.setLoadSamplePurityPct(96.8); y14.setLoadedAt(now.minus(99, ChronoUnit.DAYS));
+        y14.setDeliverySealNumber("SEAL-4477"); y14.setDeliveredWeightTonnes(64.4); y14.setDeliveryMeterReading(70965.0);
+        y14.setDeliverySamplePurityPct(96.8); y14.setDeliveredAt(now.minus(98, ChronoUnit.DAYS));
+        y14.setFlags(ReconciliationRules.evaluate(new ReconciliationRules.Input(
+                "SEAL-4477", "SEAL-4477", 65.0, 64.4, 96.8, 96.8, 70900.0, 70965.0, 2.0)));
+        y14.setStatus(y14.getFlags().isEmpty() ? ShipmentStatus.DELIVERED : ShipmentStatus.FLAGGED);
+        y14.setTransportCost(pbrToDahej * 65 * 4.0 + 5000);
+        shipments.save(y14);
+        transportOffer(id(5142), id(5028), GUJTRANS, TransportOfferStatus.ACCEPTED, jamHop, y14.getTransportCost(), now.minus(100, ChronoUnit.DAYS));
+
+        // A second seal mismatch, on a different lane and a different carrier, so the rule is not
+        // pinned to one company.
+        Shipment y15 = shipment(id(5029), A_HIST_CEMENT_2, ODTRANS, TransportMode.TRUCK, pbrToRajkot, 50,
+                21.64, 69.61, 22.30, 70.80, now.minus(170, ChronoUnit.DAYS));
+        y15.setSealNumber("SEAL-4188"); y15.setLoadedWeightTonnes(50.0); y15.setLoadMeterReading(66400.0);
+        y15.setLoadSamplePurityPct(96.8); y15.setLoadedAt(now.minus(169, ChronoUnit.DAYS));
+        y15.setDeliverySealNumber("SEAL-4189"); y15.setDeliveredWeightTonnes(49.6); y15.setDeliveryMeterReading(66450.0);
+        y15.setDeliverySamplePurityPct(96.7); y15.setDeliveredAt(now.minus(168, ChronoUnit.DAYS));
+        y15.setFlags(ReconciliationRules.evaluate(new ReconciliationRules.Input(
+                "SEAL-4188", "SEAL-4189", 50.0, 49.6, 96.8, 96.7, 66400.0, 66450.0, 2.0)));
+        y15.setStatus(y15.getFlags().isEmpty() ? ShipmentStatus.DELIVERED : ShipmentStatus.FLAGGED);
+        y15.setTransportCost(pbrToRajkot * 50 * 4.0 + 5000);
+        shipments.save(y15);
+        transportOffer(id(5143), id(5029), ODTRANS, TransportOfferStatus.ACCEPTED, GeoUtil.distanceKm(21.64, 69.61, 20.46, 85.88), y15.getTransportCost(), now.minus(170, ChronoUnit.DAYS));
+        audit.record(CONCRETE, Role.UTILIZER, "SHIPMENT_FLAGGED", "Shipment", id(5029),
+                AuditService.details("loadSeal", "SEAL-4188", "deliverySeal", "SEAL-4189", "flags", y15.getFlags()));
+        notifications.notify(CEMENT, "SHIPMENT_FLAGGED", "Shipment flagged on delivery",
+                "SEAL-4188 left Porbandar but SEAL-4189 arrived at Rajkot. The weight was within tolerance, so this is a paperwork failure rather than a loss.", "Shipment", id(5029));
+
+        // Two offers that timed out on jobs the original seed already advertised.
+        transportOffer(id(5139), id(5013), GUJTRANS, TransportOfferStatus.EXPIRED, GeoUtil.distanceKm(24.57, 80.83, 22.47, 70.06), null, now.minus(3, ChronoUnit.HOURS));
+        transportOffer(id(5140), id(5005), ODTRANS, TransportOfferStatus.EXPIRED, GeoUtil.distanceKm(22.84, 69.72, 20.46, 85.88), null, now.minus(6, ChronoUnit.HOURS));
+    }
+
+    // =====================================================================================
+    // Negotiation threads
+    // -------------------------------------------------------------------------------------
+    // The original seed had a single signed contract, so both negotiation pages looked empty.
+    // Ten threads now cover every state: mid-thread OPEN ones waiting on each side in turn,
+    // signed contracts, a rejected offer and withdrawn talks. Only the ACCEPTED ones lock
+    // volume on a passport; the rest are conversations and hold nothing.
+    // =====================================================================================
+    private void seedNegotiationThreads(Instant now, LocalDate today) {
+        Co2Passport p350 = passports.findById(P350).orElseThrow();
+        Co2Passport p352 = passports.findById(P352).orElseThrow();
+
+        // 1. OPEN, three offers deep, the emitter has to answer.
+        Negotiation n1 = negotiation(NEG_CEM_CONC, P342, CEMENT, CONCRETE, CONCRETE, NegotiationStatus.OPEN, null, now.minus(9, ChronoUnit.DAYS));
+        offer(id(4103), n1, 1, CONCRETE, 3900, 25, 12, PricingStructure.FIXED, false, 10.0, 10.0,
+                "We mineralise CO2 into precast blocks at Rajkot. 25 t a month for a year, fixed price.", OfferStatus.COUNTERED, now.minus(9, ChronoUnit.DAYS));
+        offer(id(4104), n1, 2, CEMENT, 4150, 25, 12, PricingStructure.FIXED, true, 10.0, 10.0,
+                "₹4150/t is where liquefaction plus road haulage lands for us. Take-or-pay at 10% deposit.", OfferStatus.COUNTERED, now.minus(6, ChronoUnit.DAYS));
+        offer(id(4105), n1, 3, CONCRETE, 4000, 25, 12, PricingStructure.FIXED, true, 10.0, 10.0,
+                "Meeting you near the middle at ₹4000/t and accepting take-or-pay. This is our last number.", OfferStatus.PENDING, now.minus(2, ChronoUnit.DAYS));
+        notifications.notify(CEMENT, "NEGOTIATION_COUNTER", "Counter-offer v3 received",
+                "Carbonated Concrete Co countered: 25 t/month × 12 months at ₹4000/t, take-or-pay accepted.", "Negotiation", NEG_CEM_CONC);
+        audit.record(CONCRETE, Role.UTILIZER, "OFFER_COUNTERED", "Negotiation", NEG_CEM_CONC,
+                AuditService.details("version", 3, "pricePerTonne", 4000, "volumePerMonth", 25, "durationMonths", 12));
+
+        // 2. OPEN, the utilizer has to answer.
+        Negotiation n2 = negotiation(NEG_STL_ALGAE, P343, STEEL, ALGAE, ALGAE, NegotiationStatus.OPEN, null, now.minus(5, ChronoUnit.DAYS));
+        offer(id(4106), n2, 1, ALGAE, 3300, 45, 18, PricingStructure.FIXED, true, 12.0, 10.0,
+                "Our Paradip ponds can take 45 t a month for 18 months if the price holds at ₹3300/t.", OfferStatus.COUNTERED, now.minus(5, ChronoUnit.DAYS));
+        offer(id(4107), n2, 2, STEEL, 3550, 45, 18, PricingStructure.INDEXED, true, 12.0, 15.0,
+                "₹3550/t indexed to the fuel surcharge, 15% deposit. Volume and duration as you asked.", OfferStatus.PENDING, now.minus(28, ChronoUnit.HOURS));
+        notifications.notify(ALGAE, "NEGOTIATION_COUNTER", "Counter-offer v2 received",
+                "Kalinga Steel Plant countered: 45 t/month × 18 months at ₹3550/t, indexed pricing.", "Negotiation", NEG_STL_ALGAE);
+
+        // 3. OPEN, opening offer still unanswered.
+        Negotiation n3 = negotiation(NEG_PWR_GH, P344, POWER, GREENHOUSE, GREENHOUSE, NegotiationStatus.OPEN, null, now.minus(31, ChronoUnit.HOURS));
+        offer(id(4108), n3, 1, GREENHOUSE, 3750, 12, 9, PricingStructure.FIXED, false, 10.0, 5.0,
+                "Small but steady: 12 t a month for the tomato houses through the cool season.", OfferStatus.PENDING, now.minus(31, ChronoUnit.HOURS));
+        notifications.notify(POWER, "NEGOTIATION_COUNTER", "Opening offer received",
+                "Sabarmati Agro Greenhouses proposes 12 t/month × 9 months at ₹3750/t.", "Negotiation", NEG_PWR_GH);
+
+        // 4. REJECTED: the offer was too far below the emitter's floor.
+        Negotiation n4 = negotiation(NEG_CEM_METH, P342, CEMENT, METHANOL, METHANOL, NegotiationStatus.REJECTED, null, now.minus(22, ChronoUnit.DAYS));
+        offer(id(4109), n4, 1, METHANOL, 3200, 60, 24, PricingStructure.FIXED, true, 10.0, 10.0,
+                "Long tenor, big volume: 60 t a month for two years at ₹3200/t.", OfferStatus.REJECTED, now.minus(22, ChronoUnit.DAYS));
+        notifications.notify(METHANOL, "NEGOTIATION_REJECTED", "Contract offer rejected",
+                "Saurashtra Cement Works rejected offer v1. ₹3200/t sits below their liquefaction cost. The negotiation is closed.", "Negotiation", NEG_CEM_METH);
+        audit.record(CEMENT, Role.EMITTER, "NEGOTIATION_REJECTED", "Negotiation", NEG_CEM_METH, AuditService.details("offerVersion", 1));
+
+        // 5. CANCELLED: talks were withdrawn after two rounds.
+        Negotiation n5 = negotiation(NEG_STL_CONC, P343, STEEL, CONCRETE, CONCRETE, NegotiationStatus.CANCELLED, null, now.minus(34, ChronoUnit.DAYS));
+        offer(id(4110), n5, 1, CONCRETE, 3400, 30, 12, PricingStructure.FIXED, false, 10.0, 10.0,
+                "Opening at ₹3400/t for 30 t a month.", OfferStatus.COUNTERED, now.minus(34, ChronoUnit.DAYS));
+        offer(id(4111), n5, 2, STEEL, 3600, 30, 12, PricingStructure.FIXED, false, 10.0, 10.0,
+                "₹3600/t, everything else as proposed.", OfferStatus.REJECTED, now.minus(31, ChronoUnit.DAYS));
+        audit.record(CONCRETE, Role.UTILIZER, "NEGOTIATION_CANCELLED", "Negotiation", NEG_STL_CONC,
+                AuditService.details("reason", "buyer secured the volume on a tender instead"));
+
+        // 6. ACCEPTED: signed after two counters, and the contract exists.
+        Negotiation n6 = negotiation(NEG_TAR_BEV, P350, TARAPUR, BEVGAS, BEVGAS, NegotiationStatus.ACCEPTED, id(3020), now.minus(27, ChronoUnit.DAYS));
+        offer(id(4112), n6, 1, BEVGAS, 4400, 20, 12, PricingStructure.FIXED, true, 8.0, 10.0,
+                "Beverage grade, 20 t a month. We will fund the polishing skid ourselves.", OfferStatus.COUNTERED, now.minus(27, ChronoUnit.DAYS));
+        offer(id(4113), n6, 2, TARAPUR, 4600, 20, 12, PricingStructure.FIXED, true, 8.0, 10.0,
+                "₹4600/t given the purity guarantee and the weekly ISO tank slots.", OfferStatus.COUNTERED, now.minus(24, ChronoUnit.DAYS));
+        offer(id(4114), n6, 3, BEVGAS, 4550, 20, 12, PricingStructure.FIXED, true, 8.0, 10.0,
+                "₹4550/t and we sign today.", OfferStatus.ACCEPTED, now.minus(22, ChronoUnit.DAYS));
+        agreement(id(3020), null, null, n6, TARAPUR, BEVGAS, p350, SaleMode.CONTRACT, 240, 4550, AgreementStatus.ACTIVE,
+                today.minusMonths(1).withDayOfMonth(1), today.minusMonths(1).withDayOfMonth(1).plusMonths(12), 12, 20.0, 10.0, true, 8.0, PricingStructure.FIXED, now.minus(22, ChronoUnit.DAYS));
+        audit.record(TARAPUR, Role.EMITTER, "CONTRACT_SIGNED", "Agreement", id(3020),
+                AuditService.details("negotiation", NEG_TAR_BEV, "lockedTonnes", 240, "pricePerTonne", 4550));
+        notifications.notify(TARAPUR, "CONTRACT_SIGNED", "Contract accepted",
+                "Palar Valley Beverage Gases accepted offer v3: 20 t/month × 12 months at ₹4550/t. 240 t locked on CO2-IND-2026-000350. Deposit 10% due at signing.", "Agreement", id(3020));
+
+        // 7. ACCEPTED: the emitter's counter was taken as-is.
+        Negotiation n7 = negotiation(NEG_KOR_SYN, P352, KORBA, SYNFUEL, SYNFUEL, NegotiationStatus.ACCEPTED, id(3021), now.minus(44, ChronoUnit.DAYS));
+        offer(id(4115), n7, 1, SYNFUEL, 3600, 50, 12, PricingStructure.FIXED, true, 10.0, 10.0,
+                "50 t a month feeds our methanol-to-gasoline pilot for a full year.", OfferStatus.COUNTERED, now.minus(44, ChronoUnit.DAYS));
+        offer(id(4116), n7, 2, KORBA, 3700, 50, 12, PricingStructure.FIXED, true, 10.0, 10.0,
+                "₹3700/t. Rail slots are reserved on the Korba to Mathura corridor.", OfferStatus.ACCEPTED, now.minus(41, ChronoUnit.DAYS));
+        agreement(id(3021), null, null, n7, KORBA, SYNFUEL, p352, SaleMode.CONTRACT, 600, 3700, AgreementStatus.ACTIVE,
+                today.minusMonths(1).withDayOfMonth(1), today.minusMonths(1).withDayOfMonth(1).plusMonths(12), 12, 50.0, 10.0, true, 10.0, PricingStructure.FIXED, now.minus(41, ChronoUnit.DAYS));
+        audit.record(SYNFUEL, Role.UTILIZER, "CONTRACT_SIGNED", "Agreement", id(3021),
+                AuditService.details("negotiation", NEG_KOR_SYN, "lockedTonnes", 600, "pricePerTonne", 3700));
+        notifications.notify(KORBA, "CONTRACT_SIGNED", "Contract accepted",
+                "Yamuna Synfuels accepted offer v2: 50 t/month × 12 months at ₹3700/t. 600 t locked on CO2-IND-2026-000352.", "Agreement", id(3021));
+
+        // 8. REJECTED, second example: the buyer walked after one counter.
+        Negotiation n8 = negotiation(NEG_VIN_MAL, P346, VINDHYA, MALWA, MALWA, NegotiationStatus.REJECTED, null, now.minus(17, ChronoUnit.DAYS));
+        offer(id(4117), n8, 1, MALWA, 3950, 15, 6, PricingStructure.FIXED, false, 10.0, 5.0,
+                "15 t a month for the Indore poly-houses over the winter crop.", OfferStatus.COUNTERED, now.minus(17, ChronoUnit.DAYS));
+        offer(id(4118), n8, 2, VINDHYA, 4250, 15, 6, PricingStructure.FIXED, false, 10.0, 10.0,
+                "₹4250/t with a 10% deposit; below that the tender route pays us more.", OfferStatus.REJECTED, now.minus(15, ChronoUnit.DAYS));
+        notifications.notify(VINDHYA, "NEGOTIATION_REJECTED", "Contract offer rejected",
+                "Malwa Protected Cultivation rejected offer v2 and will buy on the open tender instead.", "Negotiation", NEG_VIN_MAL);
+
+        // 9. CANCELLED, second example: withdrawn before anyone countered.
+        Negotiation n9 = negotiation(NEG_DEC_SPI, P347, DECCANREF, SPIRULINA, SPIRULINA, NegotiationStatus.CANCELLED, null, now.minus(12, ChronoUnit.DAYS));
+        offer(id(4119), n9, 1, SPIRULINA, 3850, 35, 12, PricingStructure.INDEXED, true, 10.0, 10.0,
+                "Indexed pricing suits us; 35 t a month to the Coimbatore raceways.", OfferStatus.REJECTED, now.minus(12, ChronoUnit.DAYS));
+        audit.record(SPIRULINA, Role.UTILIZER, "NEGOTIATION_CANCELLED", "Negotiation", NEG_DEC_SPI,
+                AuditService.details("reason", "buyer withdrew before the emitter responded"));
+
+        // The two signed contracts are the only threads that moved volume, and both are counted
+        // in the allocation figures set alongside their passports.
+        trust.onAgreementCreated(TARAPUR, BEVGAS, KORBA, SYNFUEL);
+        trust.refreshBadge(TARAPUR, KORBA);
+        notifications.notify(REGULATOR, "COMPLIANCE_ALERT", "Two long-term contracts signed this quarter",
+                "240 t on CO2-IND-2026-000350 and 600 t on CO2-IND-2026-000352, both take-or-pay. The offer threads behind them are in the audit trail.", "Company", REGULATOR);
+    }
+
+    /** One seeded negotiation thread. Offers are attached separately with {@link #offer}. */
+    private Negotiation negotiation(UUID id, UUID passportId, UUID emitter, UUID utilizer, UUID initiatedBy,
+                                    NegotiationStatus status, UUID agreementId, Instant created) {
+        Negotiation n = new Negotiation();
+        n.setId(id); n.setPassportId(passportId); n.setEmitterId(emitter); n.setUtilizerId(utilizer);
+        n.setInitiatedByCompanyId(initiatedBy); n.setStatus(status); n.setAgreementId(agreementId); n.setCreatedAt(created);
+        return negotiations.save(n);
+    }
+
     /** Shared skeleton for the extra seeded shipments; the caller fills in seal and weight detail. */
     private Shipment shipment(UUID id, UUID agreementId, UUID provider, TransportMode mode, double distanceKm, double volume,
                               double originLat, double originLng, double destLat, double destLng, Instant created) {
@@ -658,11 +1429,17 @@ public class DataSeeder implements CommandLineRunner {
 
     private void company(UUID id, String name, Role role, Sector sector, String city, String state, double lat, double lng,
                          String email, String contact, CompanyStatus status) {
-        UUID userId = id(Integer.parseInt(id.toString().substring(33)) + 100); // company ...0001xx → user ...0002xx
+        int n = Integer.parseInt(id.toString().substring(33));
+        UUID userId = id(n + 100); // company ...0001xx → user ...0002xx
         Company c = new Company();
-        c.setId(id); c.setName(name); c.setRole(role); c.setStatus(status); c.setContactEmail(email); c.setContactPhone("+91-98000-" + String.format("%05d", Math.abs(id.hashCode()) % 100000));
-        c.setAddress("Industrial Area"); c.setCity(city); c.setState(state); c.setCountry("India"); c.setLatitude(lat); c.setLongitude(lng);
-        c.setSector(sector); c.setRegistrationNumber("CIN-" + String.format("%06d", Math.abs(name.hashCode()) % 1000000));
+        c.setId(id); c.setName(name); c.setRole(role); c.setStatus(status); c.setContactEmail(email);
+        c.setContactPhone(String.format("+91-%05d-%05d", 97000 + n, (n * 6173) % 100000));
+        c.setAddress(String.format("Plot %d, %s Industrial Estate", 10 + (n * 7) % 180, city));
+        c.setCity(city); c.setState(state); c.setCountry("India"); c.setLatitude(lat); c.setLongitude(lng);
+        c.setSector(sector);
+        // CIN shape: U<industry><state><year>PLC<serial>, so the admin list reads like a real register.
+        c.setRegistrationNumber(String.format("U%05d%s%dPLC%06d", 20000 + sector.ordinal() * 1000 + n,
+                stateCode(state), 2008 + n % 15, 100000 + n * 313));
         Map<String, Object> profile = new LinkedHashMap<>();
         switch (role) {
             case EMITTER -> { profile.put("annualEmissionsTonnes", 250000); profile.put("captureCapacityTonnesPerDay", 60); profile.put("plantType", sector.name()); }
@@ -673,11 +1450,37 @@ public class DataSeeder implements CommandLineRunner {
             default -> {}
         }
         c.setRoleProfile(profile);
-        c.setCreatedAt(Instant.now().minus(200, ChronoUnit.DAYS));
-        if (status == CompanyStatus.APPROVED) c.setApprovedAt(Instant.now().minus(190, ChronoUnit.DAYS));
+        // Sign-up dates fan out so the admin list is not 30 identical timestamps; the two
+        // applications still waiting and the one that was turned down are all recent.
+        Instant registered = switch (status) {
+            case PENDING -> Instant.now().minus(2L + n % 5, ChronoUnit.DAYS);
+            case REJECTED -> Instant.now().minus(11, ChronoUnit.DAYS);
+            case APPROVED -> Instant.now().minus(420L - n * 2L, ChronoUnit.DAYS);
+        };
+        c.setCreatedAt(registered);
+        if (status == CompanyStatus.APPROVED) c.setApprovedAt(registered.plus(6, ChronoUnit.DAYS));
         companies.save(c);
         auth.createUser(userId, id, email, PASSWORD, contact, role);
         audit.record(ADMIN, Role.ADMIN, status == CompanyStatus.APPROVED ? "COMPANY_APPROVED" : "COMPANY_REGISTERED", "Company", id, AuditService.details("name", name, "role", role.name()));
+    }
+
+    /** Registrar-of-Companies state code, used to build a plausible CIN. */
+    private static String stateCode(String state) {
+        return switch (state) {
+            case "Gujarat" -> "GJ";
+            case "Odisha" -> "OR";
+            case "Madhya Pradesh" -> "MP";
+            case "Andhra Pradesh" -> "AP";
+            case "Maharashtra" -> "MH";
+            case "Telangana" -> "TG";
+            case "Karnataka" -> "KA";
+            case "Uttar Pradesh" -> "UP";
+            case "Tamil Nadu" -> "TN";
+            case "Chhattisgarh" -> "CT";
+            case "Rajasthan" -> "RJ";
+            case "Delhi" -> "DL";
+            default -> "IN";
+        };
     }
 
     private static Map<String, Object> imp(double h2o, double o2, double nox, double sox, double h2s, double co, double n2) {
